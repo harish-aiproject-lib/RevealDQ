@@ -1,0 +1,60 @@
+<section class="page panel">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="shield" [size]="20" /></span>
+    <div>
+      <h2>DQ Rules Engine</h2>
+      <p>Approve analyser recommendations and activate checks for pipeline execution.</p>
+    </div>
+  </header>
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rule</th>
+        <th>Dimension</th>
+        <th>Status</th>
+        <th>Impact</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of rules(); track r.ruleId) {
+        <tr>
+          <td>
+            <strong>{{ r.ruleName }}</strong>
+            <p class="muted">{{ r.businessDefinition }}</p>
+            <pre class="sql-code">{{ r.checkSql }}</pre>
+          </td>
+          <td><span class="tag">{{ r.dimension }}</span></td>
+          <td>
+            <span class="tag" [class.draft]="r.status === 'DRAFT'" [class.pass]="r.status === 'ACTIVE' || r.status === 'APPROVED'">
+              {{ r.status }}
+            </span>
+          </td>
+          <td>
+            {{ (r.impactedTables || []).join(', ') }}
+          </td>
+          <td class="actions">
+            @if (r.status === 'DRAFT') {
+              <button type="button" (click)="setStatus(r, 'APPROVED')">Approve</button>
+            }
+            @if (r.status === 'APPROVED') {
+              <button type="button" (click)="setStatus(r, 'ACTIVE')">Activate</button>
+            }
+            @if (r.status === 'ACTIVE') {
+              <button type="button" class="secondary" (click)="setStatus(r, 'RETIRED')">Retire</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5">No rules yet. Use the DQ Analyser Agent to recommend and save rules.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

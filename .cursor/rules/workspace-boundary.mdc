@@ -1,0 +1,28 @@
+---
+description: Restrict all file create/delete operations to the AgenticDataGov project folder
+alwaysApply: true
+---
+
+# Workspace Boundary
+
+You can’t delete or add files outside of `/Users/vedantsubramanian/Documents/Harish/AgenticAI_Projects/AgenticDataGov`.
+
+## Rules
+
+- Create, edit, and delete files **only** under `/Users/vedantsubramanian/Documents/Harish/AgenticAI_Projects/AgenticDataGov`.
+- Refuse any path that resolves outside that folder (absolute paths elsewhere, `..` traversal, symlinks out of tree).
+- Do not write to `~/.cursor/skills-cursor`, other projects, or home-directory configs unless the user explicitly asks and the path is still inside the project folder.
+- Reads outside the folder for reference are allowed; mutations are not.
+
+## Examples
+
+```text
+# Allowed
+AgenticDataGov/backend/main.go
+AgenticDataGov/frontend/src/app/app.ts
+
+# Forbidden
+/Users/vedantsubramanian/Documents/other-project/file.ts
+../sibling-project/README.md
+~/.cursor/skills-cursor/new-skill/SKILL.md
+```

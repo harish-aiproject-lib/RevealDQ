@@ -1,0 +1,57 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="database" [size]="20" /></span>
+    <div>
+      <h2>Data sources</h2>
+      <p>Connect to MySQL for DQ analysis (RevealDQ warehouse).</p>
+    </div>
+  </header>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <form class="panel form" (ngSubmit)="save()">
+    <h3>Add MySQL connection</h3>
+    <label>Name <input [(ngModel)]="form.connectionName" name="connectionName" /></label>
+    <div class="row">
+      <label>Host <input [(ngModel)]="form.host" name="host" /></label>
+      <label>Port <input type="number" [(ngModel)]="form.port" name="port" /></label>
+    </div>
+    <label>Database <input [(ngModel)]="form.databaseName" name="databaseName" /></label>
+    <label>Username <input [(ngModel)]="form.username" name="username" /></label>
+    <label>Password <input type="password" [(ngModel)]="form.password" name="password" /></label>
+    <button type="submit">Save connection</button>
+  </form>
+
+  <div class="panel list">
+    <h3>Configured connections</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Endpoint</th>
+          <th>Database</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of connections(); track c.connectionId) {
+          <tr>
+            <td>{{ c.connectionName }}</td>
+            <td>{{ c.host }}:{{ c.port }}</td>
+            <td>{{ c.databaseName }}</td>
+            <td><button type="button" class="secondary" (click)="test(c.connectionId)">Test</button></td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4">No connections yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

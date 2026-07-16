@@ -1,0 +1,423 @@
+:root,
+[data-theme='light'] {
+  /* palette */
+  --cyan: #06b6d4;
+  --teal: #0e7490;
+  --cyan-ink: #0891b2;
+  --orange: #f97316;
+  --orange-soft: rgba(249, 115, 22, 0.1);
+  --cyan-soft: rgba(6, 182, 212, 0.1);
+  --ink: #101828;
+  --ink-2: #344054;
+  --muted: #667085;
+  --faint: #98a2b3;
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f9fafc;
+  --line: #e7ecf2;
+  --line-strong: #d5dde7;
+  --ok: #12b76a;
+  --ok-soft: rgba(18, 183, 106, 0.12);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warn: #f79009;
+  --warn-soft: rgba(247, 144, 9, 0.12);
+  --code-bg: #0d1b2a;
+  --code-ink: #a5e8ff;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 6px 18px -4px rgba(16, 24, 40, 0.1);
+  --shadow-lg: 0 20px 45px -12px rgba(16, 24, 40, 0.18);
+  --grad-primary: linear-gradient(120deg, #06b6d4, #0e7490);
+  --grad-accent: linear-gradient(120deg, #fb923c, #f97316);
+  --grad-hero: linear-gradient(120deg, #06b6d4 0%, #0ea5e9 55%, #6366f1 110%);
+  --avatar-grad: linear-gradient(135deg, #06b6d4, #6366f1);
+}
+
+[data-theme='dark'] {
+  --cyan: #22d3ee;
+  --teal: #67e8f9;
+  --cyan-ink: #22d3ee;
+  --orange: #fb923c;
+  --orange-soft: rgba(251, 146, 60, 0.14);
+  --cyan-soft: rgba(34, 211, 238, 0.12);
+  --ink: #f2f5f9;
+  --ink-2: #cdd5e0;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --bg: #0b1017;
+  --surface: #131a23;
+  --surface-2: #182029;
+  --line: #232d39;
+  --line-strong: #2f3b49;
+  --ok: #34d399;
+  --ok-soft: rgba(52, 211, 153, 0.14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --code-bg: #0a1420;
+  --code-ink: #9adcff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 22px -6px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 50px -12px rgba(0, 0, 0, 0.6);
+  --grad-primary: linear-gradient(120deg, #22d3ee, #0e7490);
+  --grad-accent: linear-gradient(120deg, #fdba74, #fb923c);
+  --grad-hero: linear-gradient(120deg, #22d3ee 0%, #38bdf8 55%, #818cf8 110%);
+  --avatar-grad: linear-gradient(135deg, #22d3ee, #818cf8);
+}
+
+:root {
+  --font-display: 'Sora', 'Avenir Next', 'Trebuchet MS', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- controls ---------- */
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 99px;
+  padding: 0.62rem 1.25rem;
+  background: var(--grad-primary);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+button.accent {
+  background: var(--grad-accent);
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+button.icon-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+button.icon-btn:hover:not(:disabled) {
+  color: var(--cyan-ink);
+  border-color: var(--cyan);
+  transform: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 0.62rem 0.8rem;
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+/* ---------- surfaces ---------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel.elevated {
+  box-shadow: var(--shadow-lg);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.page-head .head-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+  flex: 0 0 auto;
+}
+
+.page-head .head-icon.orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.page-head h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.page-head p {
+  margin: 0.1rem 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+/* ---------- tags ---------- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.62rem;
+  border-radius: 99px;
+  font-size: 0.71rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+}
+
+.tag.orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.tag.pass,
+.tag.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.tag.fail {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tag.draft {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.tag.neutral {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+/* ---------- code & tables ---------- */
+
+.sql-code,
+.code-font,
+code,
+pre.code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.sql-code {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: var(--r-sm);
+  padding: 0.8rem 0.9rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.68rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 0.88rem;
+}
+
+th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background: var(--surface-2);
+}
+
+/* ---------- helpers ---------- */
+
+.error {
+  color: var(--danger);
+}
+
+.ok {
+  color: var(--ok);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--cyan-ink);
+}
+
+.grad-text {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.avatar {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--avatar-grad);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: default;
+}
+
+.avatar .tip {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 215px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 0.85rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 40;
+  text-align: left;
+}
+
+.avatar:hover .tip {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.avatar .tip span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}

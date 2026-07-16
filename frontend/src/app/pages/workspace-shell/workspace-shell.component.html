@@ -1,0 +1,113 @@
+<div class="layout" [class.collapsed]="ribbonCollapsed()">
+  <aside class="ribbon">
+    <button
+      type="button"
+      class="collapse"
+      (click)="ribbonCollapsed.set(!ribbonCollapsed())"
+      title="Minimise Reveal DQ explorer"
+    >
+      {{ ribbonCollapsed() ? '»' : '«' }}
+    </button>
+
+    @if (!ribbonCollapsed()) {
+      <div class="ribbon-brand">
+        <app-logo [compact]="true" [onDark]="true" />
+        <p class="ws-name">{{ workspace()?.workspaceName || 'Workspace' }}</p>
+        <p class="tiny">{{ workspace()?.customerName }}</p>
+      </div>
+
+      <nav class="explorer">
+        <p class="section">Management</p>
+        <a routerLink="management/analyser" routerLinkActive="active">
+          <app-icon name="agent" [size]="16" /> DQ Analyser Agent
+        </a>
+        <a routerLink="management/rules" routerLinkActive="active">
+          <app-icon name="shield" [size]="16" /> DQ Rules Engine
+        </a>
+        <a routerLink="management/etl" routerLinkActive="active">
+          <app-icon name="flow" [size]="16" /> ETL Analyser
+        </a>
+        <a routerLink="management/informatica" routerLinkActive="active">
+          <app-icon name="convert" [size]="16" /> Informatica Conversion
+        </a>
+
+        <p class="section">Operations</p>
+        <a routerLink="operations/dashboard" routerLinkActive="active">
+          <app-icon name="gauge" [size]="16" /> Dashboard
+        </a>
+        <a routerLink="operations/pipelines" routerLinkActive="active">
+          <app-icon name="pipeline" [size]="16" /> DQ Pipelines
+        </a>
+
+        <p class="section">Config</p>
+        <a routerLink="config" routerLinkActive="active">
+          <app-icon name="database" [size]="16" /> Data sources
+        </a>
+
+        <p class="section">Settings</p>
+        <a routerLink="settings" routerLinkActive="active">
+          <app-icon name="settings" [size]="16" /> Security & access
+        </a>
+
+        <p class="section">Navigation</p>
+        <a routerLink="/workspaces"> <app-icon name="grid" [size]="16" /> All workspaces </a>
+      </nav>
+    } @else {
+      <div class="icon-stack">
+        <app-logo [iconOnly]="true" [compact]="true" />
+        <a routerLink="management/analyser" routerLinkActive="active" title="DQ Analyser Agent">
+          <app-icon name="agent" />
+        </a>
+        <a routerLink="management/rules" routerLinkActive="active" title="DQ Rules Engine">
+          <app-icon name="shield" />
+        </a>
+        <a routerLink="operations/dashboard" routerLinkActive="active" title="Dashboard">
+          <app-icon name="gauge" />
+        </a>
+        <a routerLink="operations/pipelines" routerLinkActive="active" title="DQ Pipelines">
+          <app-icon name="pipeline" />
+        </a>
+        <a routerLink="config" routerLinkActive="active" title="Data sources">
+          <app-icon name="database" />
+        </a>
+        <a routerLink="settings" routerLinkActive="active" title="Security & access">
+          <app-icon name="settings" />
+        </a>
+      </div>
+    }
+  </aside>
+
+  <div class="main">
+    <header class="banner">
+      <div class="banner-left">
+        <a routerLink="/workspaces" class="home-btn" title="Home — all workspaces">
+          <app-icon name="home" [size]="17" />
+        </a>
+        <div>
+          <p class="eyebrow">Control Plane · Data Plane</p>
+          <h1>{{ workspace()?.workspaceName || 'Workspace' }}</h1>
+        </div>
+      </div>
+      <div class="banner-right">
+        <button type="button" class="icon-btn" (click)="theme.toggle()" title="Toggle light / dark">
+          <app-icon [name]="theme.mode() === 'light' ? 'moon' : 'sun'" [size]="17" />
+        </button>
+        <div class="avatar">
+          {{ initials() }}
+          <div class="tip">
+            <strong>{{ auth.user()?.displayName }}</strong>
+            <span>{{ auth.user()?.email }}</span>
+          </div>
+        </div>
+        <button type="button" class="secondary signout" (click)="logout()" title="Sign out">
+          <app-icon name="logout" [size]="15" /> Sign out
+        </button>
+        <app-logo [compact]="true" />
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

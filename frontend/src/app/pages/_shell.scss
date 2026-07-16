@@ -1,0 +1,240 @@
+/* Shared app-shell styles: left ribbon + top banner + content frame */
+
+.layout {
+  display: grid;
+  grid-template-columns: 244px 1fr;
+  min-height: 100vh;
+  transition: grid-template-columns 0.2s ease;
+}
+
+.layout.collapsed {
+  grid-template-columns: 64px 1fr;
+}
+
+.ribbon {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 0.85rem 0.7rem 1rem;
+  background: linear-gradient(180deg, #0d1520 0%, #101c2c 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ribbon .collapse {
+  align-self: flex-end;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ribbon .collapse:hover {
+  background: rgba(34, 211, 238, 0.18);
+  color: #67e8f9;
+  transform: none;
+}
+
+.ribbon-brand {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0 0.35rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ribbon-brand .name,
+.ribbon-brand .ws-name {
+  color: #f1f5f9;
+}
+
+.ribbon-brand .ws-name {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.ribbon .tiny {
+  font-size: 0.72rem;
+  margin: 0;
+  color: #7d8ba1;
+}
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.explorer .section {
+  margin: 0.85rem 0.35rem 0.25rem;
+  font-size: 0.63rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.explorer a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #b7c2d2;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.explorer a app-icon {
+  color: #64748b;
+  flex: 0 0 auto;
+}
+
+.explorer a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #eef2f7;
+}
+
+.explorer a.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0.05));
+  color: #7fe9fb;
+  box-shadow: inset 2.5px 0 0 #22d3ee;
+}
+
+.explorer a:hover app-icon,
+.explorer a.active app-icon {
+  color: #22d3ee;
+}
+
+.icon-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.icon-stack a {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #8a97ab;
+}
+
+.icon-stack a:hover,
+.icon-stack a.active {
+  background: rgba(34, 211, 238, 0.16);
+  color: #22d3ee;
+}
+
+/* ---------- main + banner ---------- */
+
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1.4rem;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.banner::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), transparent 55%, var(--orange));
+  opacity: 0.7;
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.banner h1 {
+  margin: 0.05rem 0 0;
+  font-size: 1.12rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner .eyebrow {
+  color: var(--faint);
+}
+
+.home-btn {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.home-btn:hover {
+  color: var(--cyan-ink);
+  border-color: var(--cyan);
+}
+
+.banner-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.banner-right .signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.82rem;
+}
+
+.content {
+  flex: 1;
+  padding: 1.4rem;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .layout,
+  .layout.collapsed {
+    grid-template-columns: 1fr;
+  }
+  .ribbon {
+    position: static;
+    height: auto;
+  }
+}

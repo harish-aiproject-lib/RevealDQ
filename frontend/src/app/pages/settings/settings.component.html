@@ -1,0 +1,38 @@
+<section class="page panel">
+  <header class="page-head">
+    <span class="head-icon orange"><app-icon name="lock" [size]="20" /></span>
+    <div>
+      <h2>Security & access control</h2>
+      <p>Who gets access to which screen (role × screen matrix).</p>
+    </div>
+  </header>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+
+  <table>
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Screen</th>
+        <th>View</th>
+        <th>Edit</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of acl(); track row.screenAclId) {
+        <tr>
+          <td>{{ row.roleCode }}</td>
+          <td>{{ row.screenCode }}</td>
+          <td>
+            <input type="checkbox" [checked]="row.canView" (change)="toggle(row, 'canView')" />
+          </td>
+          <td>
+            <input type="checkbox" [checked]="row.canEdit" (change)="toggle(row, 'canEdit')" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

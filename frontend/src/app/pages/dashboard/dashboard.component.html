@@ -1,0 +1,68 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="gauge" [size]="20" /></span>
+    <div>
+      <h2>Operations dashboard</h2>
+      <p>Statistics of DQ executions for this workspace.</p>
+    </div>
+  </header>
+
+  @if (stats(); as s) {
+    <div class="cards">
+      <div class="panel metric">
+        <span>Total runs</span>
+        <strong>{{ s.totalRuns }}</strong>
+      </div>
+      <div class="panel metric good">
+        <span>Passed</span>
+        <strong>{{ s.passed }}</strong>
+      </div>
+      <div class="panel metric bad">
+        <span>Failed</span>
+        <strong>{{ s.failed }}</strong>
+      </div>
+      <div class="panel metric warn">
+        <span>Errors</span>
+        <strong>{{ s.errors }}</strong>
+      </div>
+      <div class="panel metric">
+        <span>Draft rules</span>
+        <strong>{{ s.rulesDraft }}</strong>
+      </div>
+      <div class="panel metric accent">
+        <span>Active rules</span>
+        <strong>{{ s.rulesActive }}</strong>
+      </div>
+    </div>
+
+    <div class="panel dims">
+      <h3>By dimension</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Runs</th>
+            <th>Failed</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of s.byDimension || []; track d.dimension) {
+            <tr>
+              <td><span class="tag">{{ d.dimension }}</span></td>
+              <td>{{ d.runs }}</td>
+              <td [class.error]="d.failed > 0">{{ d.failed }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="muted">
+                No executions yet. Run a pipeline under Operations → DQ Pipelines.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="muted">Loading…</p>
+  }
+</section>

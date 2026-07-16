@@ -1,0 +1,122 @@
+<div class="layout" [class.collapsed]="ribbonCollapsed()">
+  <aside class="ribbon">
+    <button
+      type="button"
+      class="collapse"
+      (click)="ribbonCollapsed.set(!ribbonCollapsed())"
+      title="Toggle explorer"
+    >
+      {{ ribbonCollapsed() ? '»' : '«' }}
+    </button>
+    @if (!ribbonCollapsed()) {
+      <div class="ribbon-brand">
+        <app-logo [compact]="true" [onDark]="true" />
+      </div>
+      <nav class="explorer">
+        <p class="section">Projects</p>
+        @for (ws of workspaces(); track ws.workspaceId) {
+          <a [routerLink]="['/workspaces', ws.workspaceId]">
+            <app-icon name="grid" [size]="16" /> {{ ws.workspaceName }}
+          </a>
+        } @empty {
+          <span class="muted tiny">No projects yet</span>
+        }
+        <p class="section">Quick links</p>
+        <a routerLink="/workspaces" class="active">
+          <app-icon name="home" [size]="16" /> All workspaces
+        </a>
+      </nav>
+    } @else {
+      <app-logo [iconOnly]="true" [compact]="true" />
+    }
+  </aside>
+
+  <div class="main">
+    <header class="banner">
+      <div class="banner-left">
+        <a routerLink="/workspaces" class="home-btn" title="Home">
+          <app-icon name="home" [size]="17" />
+        </a>
+        <div>
+          <p class="eyebrow">Home</p>
+          <h1>Project workspaces</h1>
+        </div>
+      </div>
+      <div class="banner-right">
+        <button type="button" class="icon-btn" (click)="theme.toggle()" title="Toggle light / dark">
+          <app-icon [name]="theme.mode() === 'light' ? 'moon' : 'sun'" [size]="17" />
+        </button>
+        <div class="avatar">
+          {{ initials() }}
+          <div class="tip">
+            <strong>{{ auth.user()?.displayName }}</strong>
+            <span>{{ auth.user()?.email }}</span>
+          </div>
+        </div>
+        <button type="button" class="secondary signout" (click)="logout()" title="Sign out">
+          <app-icon name="logout" [size]="15" /> Sign out
+        </button>
+        <app-logo [compact]="true" />
+      </div>
+    </header>
+
+    <main class="content">
+      <p class="muted intro">
+        Create customer-scoped projects. Every artefact stays inside its workspace.
+      </p>
+
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+
+      <div class="grid">
+        <section class="panel create">
+          <div class="create-head">
+            <span class="head-icon orange"><app-icon name="plus" [size]="18" /></span>
+            <h2>New workspace</h2>
+          </div>
+          <label>
+            Workspace name
+            <input
+              [(ngModel)]="workspaceName"
+              name="workspaceName"
+              placeholder="e.g. Telco RA Demo"
+            />
+          </label>
+          <label>
+            Customer name
+            <input
+              [(ngModel)]="customerName"
+              name="customerName"
+              placeholder="Customer / business unit"
+            />
+          </label>
+          <label>
+            Description
+            <textarea [(ngModel)]="description" name="description" rows="3"></textarea>
+          </label>
+          <button type="button" (click)="create()">Create project</button>
+        </section>
+
+        <section class="list">
+          @for (ws of workspaces(); track ws.workspaceId) {
+            <a class="panel card" [routerLink]="['/workspaces', ws.workspaceId]">
+              <div class="row">
+                <h3>{{ ws.workspaceName }}</h3>
+                <span class="tag">{{ ws.role }}</span>
+              </div>
+              <p class="customer">{{ ws.customerName }}</p>
+              <p class="desc muted">{{ ws.description || 'No description' }}</p>
+              <span class="open">Open workspace <app-icon name="arrow-right" [size]="14" /></span>
+            </a>
+          } @empty {
+            <div class="panel empty">
+              <app-icon name="spark" [size]="26" />
+              <p>No workspaces yet. Create your first project to begin DQ analysis.</p>
+            </div>
+          }
+        </section>
+      </div>
+    </main>
+  </div>
+</div>

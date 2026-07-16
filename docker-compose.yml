@@ -1,0 +1,3 @@
+services: {}
+# Optional orchestration placeholder — local MySQL is assumed already running.
+# Prefer scripts/run-api.sh, scripts/run-agent.sh, scripts/run-ui.sh for MVP.

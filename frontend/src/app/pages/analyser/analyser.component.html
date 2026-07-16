@@ -1,0 +1,144 @@
+<section class="analyser">
+  <header class="toolbar">
+    <div class="left">
+      <h2>DQ Analyser Agent</h2>
+      <div
+        class="mcp"
+        [class.on]="mcpConnected()"
+        [class.off]="!mcpConnected()"
+      >
+        <span class="cable" aria-hidden="true"></span>
+        <span>{{ mcpConnected() ? 'MCP connected' : 'MCP offline' }}</span>
+        <div class="mcp-tip">
+          @if (mcpDetails(); as d) {
+            <strong>MySQL MCP connection</strong>
+            <span>{{ d.name }}</span>
+            <span>{{ d.username }}{{ '@' }}{{ d.host }}:{{ d.port }}</span>
+            <span>database: {{ d.database }}</span>
+          } @else {
+            <strong>No MCP connection</strong>
+            <span>Configure a MySQL source under Config.</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <label class="model">
+      LLM
+      <select [(ngModel)]="selectedModel" name="model" (ngModelChange)="onModelChange()">
+        @for (m of models; track m.id) {
+          <option [value]="m.id">{{ m.label }}</option>
+        }
+      </select>
+    </label>
+  </header>
+
+  <div class="split">
+    <div class="chat-pane panel">
+      <div class="messages">
+        @for (m of state()?.messages || []; track $index) {
+          <div class="bubble" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
+            <div class="role">{{ m.role === 'user' ? 'You' : 'Analyser' }}</div>
+            <pre>{{ m.content }}</pre>
+          </div>
+        } @empty {
+          <p class="muted empty">Ask about completeness, validity, invoice leakage, rating gaps…</p>
+        }
+      </div>
+
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+      @if (saveNote) {
+        <p class="ok">{{ saveNote }}</p>
+      }
+
+      <form class="composer" (ngSubmit)="send()">
+        <textarea
+          [(ngModel)]="message"
+          name="message"
+          rows="3"
+          placeholder="Ask the DQ Analyser…"
+        ></textarea>
+        <button type="submit" [disabled]="loading">{{ loading ? 'Analysing…' : 'Send' }}</button>
+      </form>
+    </div>
+
+    <div class="right-pane">
+      <section class="panel rules-pane">
+        <h3>Rule recommendations</h3>
+        <div class="rules-scroll">
+          @for (rule of state()?.recommendedRules || []; track rule.ruleName) {
+            <article class="rule-card">
+              <div class="rule-head">
+                <strong>{{ rule.ruleName }}</strong>
+                <span class="tag orange">{{ rule.dimension }}</span>
+              </div>
+              <p><span class="label">Business</span> {{ rule.businessDefinition }}</p>
+              <p><span class="label">Technical</span> {{ rule.technicalDefinition }}</p>
+              <div class="meta">
+                <div>
+                  <span class="label">Tables</span>
+                  <div class="chips">
+                    @for (t of rule.impactedTables || []; track t) {
+                      <span class="chip">{{ t }}</span>
+                    }
+                  </div>
+                </div>
+                <div>
+                  <span class="label">Columns</span>
+                  <div class="chips">
+                    @for (c of rule.impactedColumns || []; track c) {
+                      <span class="chip">{{ c }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+              <p class="label">SQL check</p>
+              <pre class="sql-code">{{ rule.checkSql }}</pre>
+              <button type="button" (click)="saveRule(rule)">Save to Rules Engine</button>
+            </article>
+          } @empty {
+            <p class="muted">Recommended rules will appear here after analysis.</p>
+          }
+        </div>
+      </section>
+
+      <section class="panel preview-pane">
+        <h3>Data preview</h3>
+        @if (state()?.dataPreview; as preview) {
+          <p class="muted">{{ preview.title }}</p>
+          @if (preview.sql) {
+            <pre class="sql-code">{{ preview.sql }}</pre>
+          }
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  @for (col of preview.columns; track col) {
+                    <th>{{ col }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of preview.rows; track $index) {
+                  <tr>
+                    @for (col of preview.columns; track col) {
+                      <td>{{ cellValue(row, col) }}</td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="99">No rows returned.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="muted">Query results tied to your question will preview here.</p>
+        }
+      </section>
+    </div>
+  </div>
+</section>

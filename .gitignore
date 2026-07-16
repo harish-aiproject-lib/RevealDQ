@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+.npm
+
+# Go / local toolchains
+.tools/
+backend/reveal-dq-api
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Logs & data
+*.log
+data/
+tmp/

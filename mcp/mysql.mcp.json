@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "mysql-revealdq": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-mysql",
+        "mysql://root:${MYSQL_PASSWORD}@127.0.0.1:3306/RevealDQ"
+      ],
+      "env": {
+        "MYSQL_HOST": "127.0.0.1",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "",
+        "MYSQL_DATABASE": "RevealDQ"
+      }
+    }
+  }
+}

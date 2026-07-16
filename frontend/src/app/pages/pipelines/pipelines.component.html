@@ -1,0 +1,93 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="pipeline" [size]="20" /></span>
+    <div>
+      <h2>DQ Pipelines</h2>
+      <p>Run stored-procedure DQ jobs against the RevealDQ warehouse.</p>
+    </div>
+  </header>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="panel block">
+    <h3>Available jobs</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Pipeline</th>
+          <th>Procedure</th>
+          <th>Description</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of pipelines(); track p.pipelineId) {
+          <tr>
+            <td>{{ p.pipelineName }}</td>
+            <td><code>{{ p.procName }}</code></td>
+            <td>{{ p.description }}</td>
+            <td>
+              <button
+                type="button"
+                class="run-btn"
+                [disabled]="runningId === p.pipelineId"
+                (click)="run(p)"
+              >
+                <app-icon name="play" [size]="13" />
+                {{ runningId === p.pipelineId ? 'Running…' : 'Run' }}
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4">No pipelines configured for this workspace.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel block">
+    <h3>Recent runs</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Pipeline</th>
+          <th>Status</th>
+          <th>Checked</th>
+          <th>Failed</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of runs(); track r.runId) {
+          <tr>
+            <td>#{{ r.runId }}</td>
+            <td>{{ r.pipelineName }}</td>
+            <td>
+              <span
+                class="tag"
+                [class.pass]="r.status === 'PASSED'"
+                [class.fail]="r.status === 'FAILED' || r.status === 'ERROR'"
+                >{{ r.status }}</span
+              >
+            </td>
+            <td>{{ r.rowsChecked }}</td>
+            <td>{{ r.rowsFailed }}</td>
+            <td>{{ r.message }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6">No runs yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

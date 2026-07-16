@@ -1,0 +1,130 @@
+<div class="landing">
+  <div class="mesh" aria-hidden="true"></div>
+  <div class="dots" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <app-logo />
+    <nav>
+      <a href="#capabilities">Features</a>
+      <a href="#dimensions">Dimensions</a>
+      <a href="#about">About</a>
+    </nav>
+    <div class="top-actions">
+      <button type="button" class="icon-btn" (click)="theme.toggle()" title="Toggle light / dark">
+        <app-icon [name]="theme.mode() === 'light' ? 'moon' : 'sun'" [size]="17" />
+      </button>
+      @if (loggedIn()) {
+        <button type="button" class="accent" (click)="openApp()">
+          Open workspaces <app-icon name="arrow-right" [size]="15" />
+        </button>
+      } @else {
+        <a class="cta" href="#signin">Get started</a>
+      }
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Agentic enterprise data quality</p>
+      <h1>
+        Reveal the <span class="grad">true health</span> of your enterprise data —
+        <span class="accent-word">before you migrate</span>
+      </h1>
+      <p class="definition" id="about">
+        Reveal DQ pairs AI agents with your warehouse to continuously interrogate, profile, and
+        score data quality. It converses with your MySQL estate through MCP tools, uncovers
+        defects, and turns findings into governed, executable DQ rules.
+      </p>
+
+      <div class="stat-row" id="dimensions">
+        <div class="stat"><strong>6</strong><span>DQ dimensions</span></div>
+        <div class="stat"><strong>MCP</strong><span>native connectivity</span></div>
+        <div class="stat"><strong>SQL</strong><span>evidence-backed rules</span></div>
+      </div>
+    </div>
+
+    <form class="auth-card panel elevated" id="signin" (ngSubmit)="submit()">
+      @if (loggedIn()) {
+        <div class="signed-in">
+          <div class="avatar big">{{ (auth.user()?.displayName || 'U').slice(0, 1) }}</div>
+          <h2>Welcome back</h2>
+          <p class="muted">
+            Signed in as <strong>{{ auth.user()?.displayName || auth.user()?.email }}</strong>
+          </p>
+          <button type="button" (click)="openApp()">
+            Continue to workspaces <app-icon name="arrow-right" [size]="15" />
+          </button>
+          <button type="button" class="secondary" (click)="signOut()">
+            <app-icon name="logout" [size]="15" /> Sign out
+          </button>
+        </div>
+      } @else {
+        <h2>{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
+        <p class="muted sub">Access your project workspaces</p>
+
+        <label>
+          Email
+          <input type="email" [(ngModel)]="email" name="email" required autocomplete="username" />
+        </label>
+        @if (mode === 'register') {
+          <label>
+            Display name
+            <input [(ngModel)]="displayName" name="displayName" />
+          </label>
+        }
+        <label>
+          Password
+          <input
+            type="password"
+            [(ngModel)]="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+        </label>
+
+        @if (error) {
+          <p class="error">{{ error }}</p>
+        }
+
+        <button type="submit" [disabled]="loading">
+          {{ loading ? 'Please wait…' : mode === 'login' ? 'Enter Reveal DQ' : 'Register' }}
+        </button>
+        <button type="button" class="ghost" (click)="toggleMode()">
+          {{ mode === 'login' ? 'Need an account? Register' : 'Back to sign in' }}
+        </button>
+      }
+    </form>
+  </section>
+
+  <section class="cards" id="capabilities">
+    <div class="card panel">
+      <span class="card-icon cyan"><app-icon name="agent" [size]="21" /></span>
+      <h3>Conversational analysis</h3>
+      <p>
+        Ask the DQ Analyser Agent about your data in plain language. It queries schema and rows
+        through MCP and answers with evidence.
+      </p>
+    </div>
+    <div class="card panel">
+      <span class="card-icon indigo"><app-icon name="shield" [size]="21" /></span>
+      <h3>Governed rule lifecycle</h3>
+      <p>
+        Every recommendation ships with business and technical definitions, impacted columns, and a
+        SQL check — draft, approve, activate.
+      </p>
+    </div>
+    <div class="card panel">
+      <span class="card-icon orange"><app-icon name="chart" [size]="21" /></span>
+      <h3>Executable pipelines</h3>
+      <p>
+        Stored-procedure jobs validate the warehouse on demand and stream pass / fail statistics to
+        the operations dashboard.
+      </p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span class="muted">Reveal DQ — the true health of enterprise data. Reveal the Reality Before you migrate.</span>
+  </footer>
+</div>

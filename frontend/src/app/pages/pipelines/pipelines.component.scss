@@ -1,0 +1,35 @@
+.page {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.block {
+  padding: 1.15rem 1.25rem;
+}
+
+.block h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+}
+
+.ok,
+.error {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+code {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+  color: var(--cyan-ink);
+}

@@ -1,0 +1,17 @@
+.page {
+  padding: 1.25rem 1.35rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.ok {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
