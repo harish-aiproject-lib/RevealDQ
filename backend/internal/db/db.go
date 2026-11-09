@@ -33,7 +33,7 @@ func EnsureAdmin(db *sql.DB, email, password string) error {
 	err = db.QueryRow(`SELECT user_id FROM users WHERE email = ?`, email).Scan(&id)
 	if err == sql.ErrNoRows {
 		res, err := db.Exec(`INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)`,
-			email, string(hash), "Reveal DQ Admin")
+			email, string(hash), "Reality Reveal Admin")
 		if err != nil {
 			return err
 		}

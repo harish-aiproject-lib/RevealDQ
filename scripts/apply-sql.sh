@@ -21,9 +21,11 @@ if [[ -n "$PASS" ]]; then
   ARGS+=(-p"$PASS")
 fi
 
-echo "Applying RevealDQ_ctrl schema..."
+echo "Applying Reality Reveal control-plane schema (RevealDQ_ctrl)..."
 "$MYSQL_BIN" "${ARGS[@]}" < "$ROOT/sql/ctrl/001_schema.sql"
 "$MYSQL_BIN" "${ARGS[@]}" < "$ROOT/sql/ctrl/002_seed.sql"
+"$MYSQL_BIN" "${ARGS[@]}" < "$ROOT/sql/ctrl/004_rule_audit.sql"
+"$MYSQL_BIN" "${ARGS[@]}" < "$ROOT/sql/ctrl/005_product_modules.sql"
 
 echo "Seeding RevealDQ subject data..."
 "$MYSQL_BIN" "${ARGS[@]}" < "$ROOT/sql/revealDQ/seed_data.sql"

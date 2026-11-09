@@ -31,6 +31,7 @@ export class AnalyserComponent implements OnInit {
   readonly models: LlmOption[] = [
     { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (default)' },
     { id: 'claude-3-5-haiku-20241022', label: 'Claude Haiku 3.5 (cheaper)' },
+    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4 (highest quality)' },
   ];
 
   selectedModel = 'claude-sonnet-4-20250514';
@@ -53,7 +54,12 @@ export class AnalyserComponent implements OnInit {
   loadMcp(): void {
     this.api.listConnections(this.wsId).subscribe({
       next: (list) => {
-        const c = (list || [])[0];
+        // MCP analyser is MySQL-only — prefer an active MySQL source, not Databricks/etc.
+        const rows = list || [];
+        const c =
+          rows.find((x: any) => String(x.dbType || '').toUpperCase() === 'MYSQL' && x.isActive) ||
+          rows.find((x: any) => String(x.dbType || '').toUpperCase() === 'MYSQL') ||
+          null;
         if (!c) {
           this.mcpConnected.set(false);
           this.mcpDetails.set(null);
@@ -97,6 +103,9 @@ export class AnalyserComponent implements OnInit {
           res.answer || 'No answer returned.',
           res.recommendedRules || [],
           res.dataPreview || null,
+          res.dataSource || null,
+          res.modelUsed || null,
+          res.toolTraces || [],
         );
       },
       error: (err) => {
@@ -107,6 +116,16 @@ export class AnalyserComponent implements OnInit {
   }
 
   saveRule(rule: any): void {
+    const prov = rule.provenance || {};
+    // Traceability record persisted with the rule for the future audit screen.
+    const audit = {
+      prompt: prov.prompt || '',
+      conversation: prov.conversation || [],
+      toolTraces: prov.toolTraces || [],
+      modelUsed: prov.modelUsed || this.selectedModel,
+      dataSource: prov.dataSource || this.state()?.dataSource || null,
+      impact: rule.impact || null,
+    };
     this.api
       .createRule(this.wsId, {
         ruleName: rule.ruleName,
@@ -117,9 +136,16 @@ export class AnalyserComponent implements OnInit {
         impactedColumns: rule.impactedColumns || [],
         checkSql: rule.checkSql,
         status: 'DRAFT',
+        audit,
       })
       .subscribe({
-        next: () => (this.saveNote = `Saved draft rule: ${rule.ruleName}`),
+        next: (res: any) => {
+          if (res?.duplicate) {
+            this.saveNote = res.message || `Rule already exists — ID #${res.ruleId} (not saved again).`;
+          } else {
+            this.saveNote = `Saved draft rule #${res?.ruleId} (with audit trail): ${rule.ruleName}`;
+          }
+        },
         error: (err) => (this.error = err?.error?.error || 'Save rule failed'),
       });
   }
@@ -128,5 +154,12 @@ export class AnalyserComponent implements OnInit {
     const v = row[col];
     if (v === null || v === undefined) return '—';
     return String(v);
+  }
+
+  impactClass(percent: number | null | undefined): string {
+    const p = percent ?? 0;
+    if (p >= 25) return 'high';
+    if (p >= 5) return 'mid';
+    return 'low';
   }
 }

@@ -45,10 +45,170 @@
   color: var(--orange);
 }
 
+/* ---------- product-module picker ---------- */
+
+.picker {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.picker-label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.picker-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.module-opt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+  font-weight: 500;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.module-opt:hover:not(:disabled) {
+  transform: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+.module-opt.accent-violet:hover:not(:disabled) {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px var(--violet-soft);
+}
+
+.module-opt.selected {
+  border-color: var(--cyan);
+  background: var(--cyan-soft);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+.module-opt.selected.accent-violet {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+  box-shadow: 0 0 0 3px var(--violet-soft);
+}
+
+.module-opt.disabled {
+  opacity: 0.55;
+}
+
+.opt-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+}
+
+.opt-icon.product-cyan {
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+}
+
+.opt-icon.product-violet {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.opt-body {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.opt-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.opt-tag {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.opt-status {
+  flex: 0 0 auto;
+}
+
+button.violet {
+  background: var(--grad-violet);
+}
+
+/* ---------- list + filters ---------- */
+
 .list {
   display: grid;
   gap: 0.9rem;
   align-content: start;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+
+.chip:hover:not(:disabled) {
+  transform: none;
+  color: var(--ink);
+}
+
+.chip.on {
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+  border-color: var(--cyan);
+}
+
+.chip.on.accent-violet {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+  border-color: var(--violet);
+}
+
+.chip .count {
+  padding: 0.05rem 0.45rem;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .card {
@@ -68,6 +228,18 @@
   background: var(--grad-primary);
   opacity: 0;
   transition: opacity 0.16s ease;
+}
+
+.card.accent-violet::before {
+  background: var(--grad-violet);
+}
+
+.card.accent-violet .customer {
+  color: var(--violet-ink);
+}
+
+.card.accent-violet:hover .open {
+  color: var(--violet-ink);
 }
 
 .card:hover {

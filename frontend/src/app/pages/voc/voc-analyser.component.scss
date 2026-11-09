@@ -1,0 +1,116 @@
+.chat {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.thread {
+  padding: 1.1rem 1.25rem;
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+  overflow-y: auto;
+  max-height: 65vh;
+}
+
+.starters {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.turn {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: start;
+}
+.turn.user {
+  grid-template-columns: 1fr auto;
+}
+.turn.user .avatar {
+  order: 2;
+}
+.turn.user .bubble {
+  order: 1;
+  justify-self: end;
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.turn.agent .avatar {
+  background: var(--grad-violet);
+  color: #fff;
+}
+
+.bubble {
+  max-width: 72ch;
+  padding: 0.7rem 0.95rem;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.bubble p {
+  margin: 0;
+}
+.bubble.thinking {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.highlights {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.md :is(h4) {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 0.95rem;
+}
+.md :is(p) {
+  margin: 0 0 0.5rem;
+}
+.md :is(ul, ol) {
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+}
+.md li {
+  margin-bottom: 0.2rem;
+}
+.md code {
+  font-size: 0.8rem;
+  background: var(--surface);
+  padding: 0.05rem 0.3rem;
+  border-radius: 5px;
+}
+
+.meta {
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.composer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.composer input {
+  flex: 1;
+}

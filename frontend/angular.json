@@ -24,6 +24,14 @@
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "react",
+              "react-dom",
+              "react-dom/client",
+              "react/jsx-runtime",
+              "use-sync-external-store",
+              "use-sync-external-store/shim/with-selector.js"
+            ],
             "inlineStyleLanguage": "scss",
             "assets": [
               {
@@ -32,7 +40,8 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/@xyflow/react/dist/style.css"
             ],
             "scripts": []
           },
@@ -46,8 +55,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "10kB",
+                  "maximumError": "14kB"
                 }
               ],
               "outputHashing": "all"

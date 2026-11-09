@@ -19,6 +19,9 @@
             <strong>No MCP connection</strong>
             <span>Configure a MySQL source under Config.</span>
           }
+          @if (state()?.dataSource; as ds) {
+            <span class="channel">Active channel: {{ ds === 'mcp' ? 'MCP (stdio)' : 'Direct MySQL' }}</span>
+          }
         </div>
       </div>
     </div>
@@ -74,6 +77,14 @@
                 <strong>{{ rule.ruleName }}</strong>
                 <span class="tag orange">{{ rule.dimension }}</span>
               </div>
+              @if (rule.impact; as im) {
+                <div class="impact impact-{{ impactClass(im.impactedPercent) }}">
+                  <span class="impact-pct">{{ im.impactedPercent }}%</span>
+                  <span class="impact-detail">
+                    {{ im.impactedCount }} of {{ im.totalCount }} records impacted
+                  </span>
+                </div>
+              }
               <p><span class="label">Business</span> {{ rule.businessDefinition }}</p>
               <p><span class="label">Technical</span> {{ rule.technicalDefinition }}</p>
               <div class="meta">
@@ -108,6 +119,14 @@
         <h3>Data preview</h3>
         @if (state()?.dataPreview; as preview) {
           <p class="muted">{{ preview.title }}</p>
+          @if (preview.impact; as im) {
+            <div class="impact impact-{{ impactClass(im.impactedPercent) }} preview-impact">
+              <span class="impact-pct">{{ im.impactedPercent }}%</span>
+              <span class="impact-detail">
+                {{ im.impactedCount }} of {{ im.totalCount }} records impacted by this rule
+              </span>
+            </div>
+          }
           @if (preview.sql) {
             <pre class="sql-code">{{ preview.sql }}</pre>
           }

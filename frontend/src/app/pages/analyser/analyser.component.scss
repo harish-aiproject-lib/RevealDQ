@@ -1,7 +1,12 @@
 .analyser {
-  display: grid;
+  /* Lock the module to the viewport so the PAGE never scrolls; only the inner
+     regions (chat, rules, preview) scroll, each independently. */
+  display: flex;
+  flex-direction: column;
   gap: 0.9rem;
-  min-height: calc(100vh - 130px);
+  height: calc(100vh - 130px);
+  min-height: 480px;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -110,21 +115,24 @@
 .split {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
   gap: 1rem;
-  min-height: 0;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-pane {
   display: grid;
   grid-template-rows: 1fr auto auto;
-  min-height: 620px;
+  min-height: 0;
   overflow: hidden;
 }
 
 .messages {
   padding: 1.1rem;
-  overflow: auto;
+  overflow-y: auto;
+  min-height: 0;
   display: grid;
   gap: 0.8rem;
   align-content: start;
@@ -187,15 +195,23 @@
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: 1rem;
-  min-height: 620px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.rules-pane,
-.preview-pane {
+.rules-pane {
   padding: 1rem 1.05rem;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.preview-pane {
+  padding: 1rem 1.05rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
@@ -208,14 +224,15 @@
   gap: 0.45rem;
 }
 
+/* The two independent scroll regions inside the results column. */
 .rules-scroll,
 .table-wrap {
-  overflow: auto;
+  overflow-y: auto;
   min-height: 0;
 }
 
-.preview-pane {
-  grid-template-rows: auto auto auto 1fr;
+.table-wrap {
+  flex: 1;
 }
 
 .rule-card {
@@ -294,6 +311,70 @@
   font-size: 0.82rem;
 }
 
+/* ---------- impact badges ---------- */
+
+.impact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  width: fit-content;
+}
+
+.impact.preview-impact {
+  margin: 0.1rem 0 0.55rem;
+}
+
+.impact .impact-pct {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1;
+}
+
+.impact .impact-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.impact.impact-high {
+  background: color-mix(in srgb, var(--orange) 14%, transparent);
+  border-color: color-mix(in srgb, var(--orange) 45%, transparent);
+}
+
+.impact.impact-high .impact-pct {
+  color: var(--orange);
+}
+
+.impact.impact-mid {
+  background: var(--cyan-soft);
+  border-color: color-mix(in srgb, var(--cyan) 40%, transparent);
+}
+
+.impact.impact-mid .impact-pct {
+  color: var(--cyan-ink);
+}
+
+.impact.impact-low {
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 38%, transparent);
+}
+
+.impact.impact-low .impact-pct {
+  color: var(--ok);
+}
+
+.mcp-tip .channel {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--line);
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
 .error,
 .ok {
   margin: 0 1rem;
@@ -316,13 +397,25 @@
 }
 
 @media (max-width: 1100px) {
+  /* Stack the columns and let the page scroll naturally on narrow screens. */
+  .analyser {
+    height: auto;
+    overflow: visible;
+  }
   .split,
   .right-pane {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
+    overflow: visible;
   }
   .chat-pane,
-  .right-pane {
+  .rules-pane,
+  .preview-pane {
     min-height: 420px;
+  }
+  .messages,
+  .rules-scroll,
+  .table-wrap {
+    max-height: 420px;
   }
 }

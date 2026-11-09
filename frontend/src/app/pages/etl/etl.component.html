@@ -1,0 +1,194 @@
+<section class="etl">
+  <!-- Context filter bar (before the conversation begins) -->
+  <header class="toolbar panel">
+    <div class="title">
+      <span class="badge"><app-icon name="pipeline" [size]="22" /></span>
+      <div>
+        <h2>ETL Analyser Agent</h2>
+        <p class="muted">Upload a SQL script or an Informatica ETL (XML) file to get a detailed, conversational breakdown.</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="seg" role="tablist" aria-label="File type">
+        @for (ft of fileTypes; track ft.id) {
+          <button
+            type="button"
+            class="seg-btn"
+            [class.active]="fileType() === ft.id"
+            (click)="setFileType($any(ft.id))"
+          >
+            <app-icon [name]="ft.icon" [size]="16" />
+            {{ ft.label }}
+          </button>
+        }
+      </div>
+
+      <label class="model">
+        Model
+        <select [(ngModel)]="selectedModel">
+          @for (m of models; track m.id) {
+            <option [value]="m.id">{{ m.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="upload">
+        <input type="file" accept=".sql,.xml,text/plain,application/xml" (change)="onFilePicked($event)" hidden #fileInput />
+        <button type="button" class="btn ghost" (click)="fileInput.click()">
+          <app-icon name="grid" [size]="16" /> Choose file
+        </button>
+      </label>
+
+      <button type="button" class="btn primary" (click)="analyze()" [disabled]="loading() || !fileName()">
+        <app-icon name="spark" [size]="16" /> Analyse
+      </button>
+    </div>
+  </header>
+
+  @if (fileName()) {
+    <div class="filechip">
+      <app-icon [name]="fileType() === 'informatica_xml' ? 'convert' : 'database'" [size]="14" />
+      <span class="fname">{{ fileName() }}</span>
+      <span class="tag">{{ fileType() === 'informatica_xml' ? 'Informatica XML' : 'SQL' }}</span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="banner error">{{ error() }}</div>
+  }
+
+  <div class="body">
+    <!-- Conversation (independent scroll) -->
+    <div class="panel chat">
+      <div class="panel-head">
+        <app-icon name="agent" [size]="16" /> Conversation
+      </div>
+      <div class="stream">
+        @if (!messages().length && !loading()) {
+          <div class="empty">
+            <app-icon name="spark" [size]="26" />
+            <p>Pick your file type, upload a file and hit <strong>Analyse</strong>. Then ask follow-up questions here.</p>
+          </div>
+        }
+        @for (m of messages(); track $index) {
+          <div class="msg" [class.user]="m.role === 'user'">
+            <span class="who">{{ m.role === 'user' ? 'You' : 'Agent' }}</span>
+            <div class="bubble md" [innerHTML]="m.html"></div>
+          </div>
+        }
+        @if (loading()) {
+          <div class="msg">
+            <span class="who">Agent</span>
+            <div class="bubble typing">Analysing…</div>
+          </div>
+        }
+      </div>
+      <form class="composer" (ngSubmit)="ask()">
+        <input
+          type="text"
+          [(ngModel)]="question"
+          name="question"
+          placeholder="Ask about sources, targets, steps, complexity…"
+          [disabled]="!analysis() || loading()"
+        />
+        <button type="submit" class="btn primary" [disabled]="!analysis() || loading() || !question.trim()">
+          <app-icon name="arrow-right" [size]="16" />
+        </button>
+      </form>
+    </div>
+
+    <!-- Analysis results (independent scroll) -->
+    <div class="panel results">
+      <div class="panel-head">
+        <app-icon name="chart" [size]="16" /> Analysis
+      </div>
+      <div class="results-scroll">
+        @if (!analysis()) {
+          <div class="empty tall">
+            <app-icon name="pipeline" [size]="30" />
+            <p>The impact story, step flow and detailed breakdown appear here once you analyse a file.</p>
+          </div>
+        } @else {
+          <!-- AI agent pipeline -->
+          <div class="agentflow">
+            <span class="af-step"><app-icon name="database" [size]="14" /> Metadata Extraction</span>
+            <app-icon name="arrow-right" [size]="14" />
+            <span class="af-step"><app-icon name="flow" [size]="14" /> Knowledge Graph</span>
+            <span class="af-plus">+</span>
+            <span class="af-step"><app-icon name="spark" [size]="14" /> LLM Reasoning</span>
+            <app-icon name="arrow-right" [size]="14" />
+            <span class="af-step"><app-icon name="chart" [size]="14" /> Visualization</span>
+          </div>
+
+          <!-- Impact story -->
+          <div class="block">
+            <h3 class="block-title"><app-icon name="gauge" [size]="16" /> Impact story</h3>
+            <div class="metrics">
+              @for (mx of analysis()!.metrics; track mx.label) {
+                <div class="metric" [class]="toneClass(mx.tone)">
+                  <span class="m-value">{{ mx.value }}</span>
+                  <span class="m-label">{{ mx.label }}</span>
+                  @if (mx.hint) {
+                    <span class="m-hint">{{ mx.hint }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Mapping graph (React Flow) -->
+          @if (graphNodes().length) {
+            <div class="block">
+              <h3 class="block-title">
+                <app-icon name="flow" [size]="16" /> Mapping graph — Source → Transform → Target
+                <span class="hint-inline">click any node for an AI explanation</span>
+              </h3>
+              <div class="graph-wrap">
+                <div class="graph-canvas">
+                  <app-flow-graph
+                    [nodes]="graphNodes()"
+                    [edges]="graphEdges()"
+                    [selectedId]="selectedNode()?.id || null"
+                    (nodeClick)="onNodeClick($event)"
+                  />
+                </div>
+
+                @if (selectedNode(); as n) {
+                  <aside class="node-panel">
+                    <div class="np-head">
+                      <div>
+                        <span class="np-kind" [class]="kindClass(n.kind)">{{ n.kind }}</span>
+                        <strong>{{ n.label }}</strong>
+                        <span class="np-type">{{ n.ntype }}</span>
+                      </div>
+                      <button type="button" class="np-close" (click)="closeNode()" aria-label="Close">×</button>
+                    </div>
+                    <div class="np-links">
+                      <span><em>From:</em> {{ n.upstream.length ? n.upstream.join(', ') : '—' }}</span>
+                      <span><em>To:</em> {{ n.downstream.length ? n.downstream.join(', ') : '—' }}</span>
+                    </div>
+                    <div class="np-body md" [innerHTML]="nodeExplanationHtml()"></div>
+                    @if (nodeExplaining()) {
+                      <span class="np-loading">AI is reasoning about this step…</span>
+                    } @else if (nodeExplainSource() === 'llm') {
+                      <span class="np-badge">AI explanation</span>
+                    } @else if (nodeExplainSource() === 'heuristic') {
+                      <span class="np-badge muted">rule-based explanation</span>
+                    }
+                  </aside>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Detailed markdown -->
+          <div class="block">
+            <h3 class="block-title"><app-icon name="table" [size]="16" /> Detailed breakdown</h3>
+            <div class="md summary" [innerHTML]="summaryHtml()"></div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,140 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="flag" [size]="20" /></span>
+    <div>
+      <h2>Actions</h2>
+      <p>
+        What the business should do about what customers are saying. The agent groups negative and urgent
+        signals into de-duplicated actions on every sync; you can add your own too.
+      </p>
+    </div>
+    <div class="head-actions">
+      <button class="primary" (click)="showForm = !showForm">
+        <app-icon name="plus" [size]="15" /> {{ showForm ? 'Close' : 'New action' }}
+      </button>
+    </div>
+  </header>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <form class="panel form" (ngSubmit)="create()">
+      <div class="row">
+        <label>
+          Title
+          <input [(ngModel)]="form.title" name="title" placeholder="Publish incident post-mortem on LinkedIn" required />
+        </label>
+        <label>
+          Company
+          <select [(ngModel)]="form.companyId" name="companyId">
+            <option [ngValue]="null">— project wide —</option>
+            @for (c of companies(); track c.companyId) {
+              <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <label>
+        Description
+        <textarea [(ngModel)]="form.description" name="description" rows="2"></textarea>
+      </label>
+      <div class="row">
+        <label>
+          Category
+          <select [(ngModel)]="form.category" name="category">
+            @for (c of categories; track c) {
+              <option [value]="c">{{ titleCase(c) }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Priority
+          <select [(ngModel)]="form.priority" name="priority">
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="primary"><app-icon name="check" [size]="15" /> Create</button>
+    </form>
+  }
+
+  @if (!actions().length && !loading()) {
+    <div class="panel empty">
+      <span class="e-icon"><app-icon name="flag" [size]="22" /></span>
+      <p>
+        No actions yet. Once signals are synced and analysed, the agent proposes actions here from negative and
+        urgent customer voices. You can also create one manually.
+      </p>
+    </div>
+  }
+
+  <div class="board">
+    @for (col of columns; track col.status) {
+      <div class="col" [class.muted-col]="col.status === 'DONE' || col.status === 'DISMISSED'">
+        <h3>
+          {{ col.label }} <span class="tag neutral">{{ byStatus()[col.status].length }}</span>
+        </h3>
+        @for (a of byStatus()[col.status]; track a.actionId) {
+          <article class="card">
+            <div class="c-top">
+              <span [class]="'tag ' + a.priority.toLowerCase()">{{ a.priority }}</span>
+              @if (a.category) {
+                <span class="tag cat">{{ titleCase(a.category) }}</span>
+              }
+              <span class="src" [title]="a.source === 'AGENT' ? 'Created by the VoC agent' : 'Created manually'">
+                <app-icon [name]="a.source === 'AGENT' ? 'agent' : 'users'" [size]="13" />
+              </span>
+            </div>
+            <h4>{{ a.title }}</h4>
+            @if (a.description) {
+              <p class="desc">{{ a.description }}</p>
+            }
+            <div class="c-meta">
+              @if (a.companyName) {
+                <span>{{ a.companyName }}</span>
+              }
+              @if (a.signalCount) {
+                <a [routerLink]="['/workspaces', wsId, 'voc', 'signals']"
+                   [queryParams]="{ companyId: a.companyId, sentiment: 'NEGATIVE', category: a.category }">
+                  {{ a.signalCount }} signal{{ a.signalCount === 1 ? '' : 's' }}
+                </a>
+              }
+              <span>{{ relTime(a.updatedAt) }}</span>
+            </div>
+            <div class="c-actions">
+              <input
+                class="owner"
+                [value]="a.owner || ''"
+                placeholder="owner"
+                (blur)="setOwner(a, $any($event.target).value)"
+              />
+              <select class="prio" [value]="a.priority" (change)="setPriority(a, $any($event.target).value)">
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
+              @if (next(a.status); as n) {
+                <button class="small primary" (click)="move(a, n)">
+                  {{ n === 'IN_PROGRESS' ? 'Start' : 'Done' }} →
+                </button>
+              }
+              @if (a.status === 'OPEN') {
+                <button class="small" (click)="move(a, 'DISMISSED')">Dismiss</button>
+              }
+              @if (a.status === 'DONE' || a.status === 'DISMISSED') {
+                <button class="small" (click)="move(a, 'OPEN')">Reopen</button>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</section>

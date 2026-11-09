@@ -1,6 +1,19 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { productGuard } from './core/product.guard';
 
+/**
+ * Reality Reveal routing.
+ *
+ * `/workspaces/:id` hosts a project. Its children are grouped by product module:
+ *   - Reveal DQ  → management/*, operations/*
+ *   - Reveal VoC → voc/*
+ *   - shared     → config, settings
+ *
+ * `productGuard` keeps each project on its own module: opening the bare project
+ * URL lands on the module's default screen, and a DQ route requested inside a
+ * VoC project (or vice-versa) is redirected to the module home.
+ */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
@@ -16,12 +29,21 @@ export const routes: Routes = [
   {
     path: 'workspaces/:id',
     canActivate: [authGuard],
+    canActivateChild: [productGuard],
     loadComponent: () =>
       import('./pages/workspace-shell/workspace-shell.component').then(
         (m) => m.WorkspaceShellComponent,
       ),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'management/analyser' },
+      // Module home: productGuard redirects to the product's default route.
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () => import('./pages/stub/stub.component').then((m) => m.StubComponent),
+        data: { title: 'Opening project…', message: 'Loading the product module for this project.' },
+      },
+
+      // ---- Reveal DQ ----
       {
         path: 'management/analyser',
         loadComponent: () =>
@@ -33,17 +55,14 @@ export const routes: Routes = [
       },
       {
         path: 'management/etl',
-        loadComponent: () => import('./pages/stub/stub.component').then((m) => m.StubComponent),
-        data: { title: 'ETL Analyser Agent', message: 'Coming soon — stub for MVP.' },
+        loadComponent: () => import('./pages/etl/etl.component').then((m) => m.EtlComponent),
       },
       {
-        path: 'management/informatica',
-        loadComponent: () => import('./pages/stub/stub.component').then((m) => m.StubComponent),
-        data: {
-          title: 'Informatica DQ Conversion Agent',
-          message: 'Coming soon — stub for MVP.',
-        },
+        path: 'management/conversion',
+        loadComponent: () =>
+          import('./pages/conversion/conversion.component').then((m) => m.ConversionComponent),
       },
+      { path: 'management/informatica', pathMatch: 'full', redirectTo: 'management/conversion' },
       {
         path: 'operations/dashboard',
         loadComponent: () =>
@@ -54,6 +73,39 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/pipelines/pipelines.component').then((m) => m.PipelinesComponent),
       },
+
+      // ---- Reveal VoC ----
+      {
+        path: 'voc/overview',
+        loadComponent: () => import('./pages/voc/voc-home.component').then((m) => m.VocHomeComponent),
+      },
+      {
+        path: 'voc/companies',
+        loadComponent: () =>
+          import('./pages/voc/voc-companies.component').then((m) => m.VocCompaniesComponent),
+      },
+      {
+        path: 'voc/signals',
+        loadComponent: () =>
+          import('./pages/voc/voc-signals.component').then((m) => m.VocSignalsComponent),
+      },
+      {
+        path: 'voc/actions',
+        loadComponent: () =>
+          import('./pages/voc/voc-actions.component').then((m) => m.VocActionsComponent),
+      },
+      {
+        path: 'voc/analyser',
+        loadComponent: () =>
+          import('./pages/voc/voc-analyser.component').then((m) => m.VocAnalyserComponent),
+      },
+      {
+        path: 'voc/sources',
+        loadComponent: () =>
+          import('./pages/voc/voc-sources.component').then((m) => m.VocSourcesComponent),
+      },
+
+      // ---- Shared across modules ----
       {
         path: 'config',
         loadComponent: () =>

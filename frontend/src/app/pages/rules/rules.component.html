@@ -3,58 +3,260 @@
     <span class="head-icon"><app-icon name="shield" [size]="20" /></span>
     <div>
       <h2>DQ Rules Engine</h2>
-      <p>Approve analyser recommendations and activate checks for pipeline execution.</p>
+      <p>Approve analyser recommendations, activate checks, and trace how each rule was created.</p>
     </div>
   </header>
+
+  <nav class="tabs">
+    <button type="button" [class.active]="tab() === 'rules'" (click)="tab.set('rules')">
+      Rules ({{ rules().length }})
+    </button>
+    <button type="button" [class.active]="tab() === 'audit'" (click)="tab.set('audit')">
+      Audit trail
+    </button>
+  </nav>
 
   @if (error) {
     <p class="error">{{ error }}</p>
   }
+  @if (note) {
+    <p class="ok">{{ note }}</p>
+  }
 
-  <table>
-    <thead>
-      <tr>
-        <th>Rule</th>
-        <th>Dimension</th>
-        <th>Status</th>
-        <th>Impact</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
+  <!-- ==================== RULES TAB ==================== -->
+  @if (tab() === 'rules') {
+    <form class="filters" (ngSubmit)="applyFilter()">
+      <input [(ngModel)]="filter.q" name="q" placeholder="Search name or definition" />
+      <input [(ngModel)]="filter.table" name="table" placeholder="Table, e.g. usage_cdr" />
+      <select [(ngModel)]="filter.dimension" name="dimension">
+        <option value="">All dimensions</option>
+        @for (d of dimensions; track d) {
+          <option [value]="d">{{ d }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filter.status" name="status">
+        <option value="">All statuses</option>
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+      <button type="submit">Search</button>
+      <button type="button" class="secondary" (click)="clearFilter()">Clear</button>
+    </form>
+    <div class="rules-list">
       @for (r of rules(); track r.ruleId) {
-        <tr>
-          <td>
-            <strong>{{ r.ruleName }}</strong>
-            <p class="muted">{{ r.businessDefinition }}</p>
-            <pre class="sql-code">{{ r.checkSql }}</pre>
-          </td>
-          <td><span class="tag">{{ r.dimension }}</span></td>
-          <td>
-            <span class="tag" [class.draft]="r.status === 'DRAFT'" [class.pass]="r.status === 'ACTIVE' || r.status === 'APPROVED'">
-              {{ r.status }}
-            </span>
-          </td>
-          <td>
-            {{ (r.impactedTables || []).join(', ') }}
-          </td>
-          <td class="actions">
-            @if (r.status === 'DRAFT') {
-              <button type="button" (click)="setStatus(r, 'APPROVED')">Approve</button>
-            }
-            @if (r.status === 'APPROVED') {
-              <button type="button" (click)="setStatus(r, 'ACTIVE')">Activate</button>
-            }
-            @if (r.status === 'ACTIVE') {
-              <button type="button" class="secondary" (click)="setStatus(r, 'RETIRED')">Retire</button>
-            }
-          </td>
-        </tr>
+        <article class="rule-card" [class.active-rule]="isActive(r)">
+          <div class="rule-top">
+            <div class="rule-id-name">
+              <span class="rule-id">#{{ r.ruleId }}</span>
+              <strong>{{ r.ruleName }}</strong>
+              <span class="tag orange">{{ r.dimension }}</span>
+            </div>
+            <div class="rule-status">
+              <span
+                class="status-pill"
+                [class.draft]="r.status === 'DRAFT'"
+                [class.approved]="r.status === 'APPROVED'"
+                [class.active]="r.status === 'ACTIVE'"
+              >
+                {{ r.status === 'APPROVED' ? 'APPROVED · INACTIVE' : r.status }}
+              </span>
+              @if (canToggle(r)) {
+                <label class="switch" [title]="isActive(r) ? 'Click to deactivate' : 'Click to activate'">
+                  <input type="checkbox" [checked]="isActive(r)" (change)="toggleActive(r)" />
+                  <span class="slider"></span>
+                </label>
+              }
+            </div>
+          </div>
+
+          @if (editingId() === r.ruleId) {
+            <!-- Inline edit: only SQL + business/technical definitions -->
+            <div class="edit-form">
+              <label>
+                Business definition
+                <textarea [(ngModel)]="editModel.businessDefinition" name="biz" rows="2"></textarea>
+              </label>
+              <label>
+                Technical definition
+                <textarea [(ngModel)]="editModel.technicalDefinition" name="tech" rows="2"></textarea>
+              </label>
+              <label>
+                SQL check
+                <textarea class="mono" [(ngModel)]="editModel.checkSql" name="sql" rows="4"></textarea>
+              </label>
+              <div class="edit-actions">
+                <button type="button" (click)="saveEdit(r)">Save changes</button>
+                <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </div>
+          } @else {
+            <div class="rule-body">
+              <p><span class="label">Business</span> {{ r.businessDefinition }}</p>
+              <p><span class="label">Technical</span> {{ r.technicalDefinition }}</p>
+              @if ((r.impactedTables || []).length) {
+                <p class="chips-row">
+                  <span class="label">Tables</span>
+                  @for (t of r.impactedTables; track t) {
+                    <span class="chip">{{ t }}</span>
+                  }
+                </p>
+              }
+              <pre class="sql-code">{{ r.checkSql }}</pre>
+            </div>
+          }
+
+          @if (editingId() !== r.ruleId) {
+            <div class="rule-actions">
+              @if (r.status === 'DRAFT') {
+                <button type="button" (click)="approve(r)">Approve</button>
+                <button type="button" class="danger" (click)="reject(r)">Reject</button>
+              }
+              <button type="button" class="secondary" (click)="startEdit(r)">
+                <app-icon name="settings" [size]="14" /> Edit
+              </button>
+              @if (r.status !== 'DRAFT') {
+                <button type="button" class="danger" (click)="reject(r)">Delete</button>
+              }
+              @if (auditFor(r.ruleId)) {
+                <button type="button" class="secondary" (click)="openAudit(r)">View audit</button>
+              }
+            </div>
+          }
+
+          <!-- ==================== TRACEABILITY FLOW BOX ==================== -->
+          @if (auditFor(r.ruleId); as a) {
+            <div class="flow-box">
+              <div class="flow-title">
+                <app-icon name="flow" [size]="14" /> Traceability
+              </div>
+              <div class="flow-steps">
+                <div class="flow-step">
+                  <span class="step-k">Prompt</span>
+                  <span class="step-v" [title]="a.prompt">{{ a.prompt || '—' }}</span>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <span class="step-k">Analysis</span>
+                  <span class="step-v">
+                    {{ a.modelUsed || 'heuristic' }}
+                    @if (a.dataSource) { · {{ a.dataSource === 'mcp' ? 'MCP' : 'MySQL' }} }
+                  </span>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <span class="step-k">Impact</span>
+                  <span class="step-v">
+                    @if (a.impactedPercent != null) {
+                      {{ a.impactedPercent }}% ({{ a.impactedCount }}/{{ a.totalCount }})
+                    } @else { — }
+                  </span>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <span class="step-k">Saved</span>
+                  <span class="step-v">{{ fmtDate(a.createdAt) }}</span>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <span class="step-k">Status</span>
+                  <span class="step-v">{{ r.status }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </article>
       } @empty {
-        <tr>
-          <td colspan="5">No rules yet. Use the DQ Analyser Agent to recommend and save rules.</td>
-        </tr>
+        <p class="muted empty">No rules yet. Use the DQ Analyser Agent to recommend and save rules.</p>
       }
-    </tbody>
-  </table>
+    </div>
+  }
+
+  <!-- ==================== AUDIT TAB ==================== -->
+  @if (tab() === 'audit') {
+    <div class="audit-layout">
+      <aside class="audit-list">
+        <p class="label">Select a rule</p>
+        @for (r of rules(); track r.ruleId) {
+          @if (auditFor(r.ruleId)) {
+            <button
+              type="button"
+              class="audit-item"
+              [class.selected]="selectedAuditRuleId() === r.ruleId"
+              (click)="selectedAuditRuleId.set(r.ruleId)"
+            >
+              <span class="rule-id">#{{ r.ruleId }}</span>
+              <span class="audit-item-name">{{ r.ruleName }}</span>
+            </button>
+          }
+        } @empty {
+          <p class="muted">No audit records yet.</p>
+        }
+        @if (!audit().length) {
+          <p class="muted">No audit records yet. Save a rule from the Analyser to build the trail.</p>
+        }
+      </aside>
+
+      <div class="audit-detail">
+        @if (selectedAudit(); as a) {
+          <h3>{{ a.ruleName }} <span class="rule-id">#{{ a.ruleId }}</span></h3>
+
+          <div class="meta-grid">
+            <div><span class="label">Dimension</span>{{ a.dimension || '—' }}</div>
+            <div><span class="label">Created</span>{{ fmtDate(a.createdAt) }}</div>
+            <div><span class="label">Created by</span>{{ a.createdBy ? 'User #' + a.createdBy : 'System' }}</div>
+            <div><span class="label">Model</span>{{ a.modelUsed || 'heuristic' }}</div>
+            <div><span class="label">Data channel</span>{{ a.dataSource === 'mcp' ? 'MCP (stdio)' : 'Direct MySQL' }}</div>
+            <div>
+              <span class="label">Impact</span>
+              @if (a.impactedPercent != null) {
+                {{ a.impactedPercent }}% ({{ a.impactedCount }}/{{ a.totalCount }})
+              } @else { — }
+            </div>
+          </div>
+
+          <div class="audit-section">
+            <p class="label">Prompt used</p>
+            <blockquote>{{ a.prompt || '—' }}</blockquote>
+          </div>
+
+          <div class="audit-section">
+            <p class="label">Logical reasoning (interaction trace)</p>
+            @if (asList(a.toolTraces).length) {
+              <ol class="reasoning">
+                @for (t of asList(a.toolTraces); track $index) {
+                  <li>{{ traceLabel(t) }}</li>
+                }
+              </ol>
+            } @else {
+              <p class="muted">No trace captured.</p>
+            }
+          </div>
+
+          <div class="audit-section">
+            <p class="label">Conversation history</p>
+            @if (asList(a.conversation).length) {
+              <div class="conv">
+                @for (m of asList(a.conversation); track $index) {
+                  <div class="conv-msg" [class.user]="m.role === 'user'">
+                    <span class="conv-role">{{ m.role }}</span>
+                    <span class="conv-text">{{ m.content }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="muted">No conversation captured.</p>
+            }
+          </div>
+
+          <div class="audit-section">
+            <p class="label">SQL check at save time</p>
+            <pre class="sql-code">{{ a.checkSql }}</pre>
+          </div>
+        } @else {
+          <p class="muted empty">Select a rule on the left to view its full audit trail.</p>
+        }
+      </div>
+    </div>
+  }
 </section>

@@ -6,26 +6,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/harish-aiproject-lib/AgenticDataGov/backend/internal/config"
 	"github.com/harish-aiproject-lib/AgenticDataGov/backend/internal/middleware"
+	"github.com/harish-aiproject-lib/AgenticDataGov/backend/internal/secretbox"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
-	ctrl *sql.DB
-	src  *sql.DB
-	cfg  config.Config
+	ctrl      *sql.DB
+	src       *sql.DB
+	cfg       config.Config
+	box       *secretbox.Box
+	handoffMu sync.Mutex
+	handoffs  map[string]connectionHandoff
 }
 
 func New(ctrl, src *sql.DB, cfg config.Config) *Handler {
-	return &Handler{ctrl: ctrl, src: src, cfg: cfg}
+	box, err := secretbox.New(cfg.DataKey, cfg.JWTSecret)
+	if err != nil {
+		log.Fatalf("secretbox: %v", err)
+	}
+	return &Handler{ctrl: ctrl, src: src, cfg: cfg, box: box, handoffs: map[string]connectionHandoff{}}
 }
 
 func writeJSON(w http.ResponseWriter, code int, v interface{}) {
@@ -125,15 +135,78 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]interface{}{"userId": uid, "email": email, "displayName": name})
 }
 
+// ---------------- Product modules (Reality Reveal platform) ----------------
+
+type productModule struct {
+	Code      string `json:"productCode"`
+	Name      string `json:"productName"`
+	ShortName string `json:"shortName"`
+	Tagline   string `json:"tagline"`
+	Status    string `json:"status"` // ACTIVE | PREVIEW | COMING_SOON
+	SortOrder int    `json:"sortOrder"`
+}
+
+func (h *Handler) loadProducts() ([]productModule, error) {
+	rows, err := h.ctrl.Query(`
+		SELECT product_code, product_name, short_name, COALESCE(tagline,''), status, sort_order
+		FROM product_modules ORDER BY sort_order, product_code`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	list := []productModule{}
+	for rows.Next() {
+		var p productModule
+		if err := rows.Scan(&p.Code, &p.Name, &p.ShortName, &p.Tagline, &p.Status, &p.SortOrder); err == nil {
+			list = append(list, p)
+		}
+	}
+	return list, nil
+}
+
+// ListProducts returns the product-module catalog (Reveal DQ, Reveal VoC, ...).
+func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	list, err := h.loadProducts()
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, list)
+}
+
+// resolveProduct validates a requested product code against the catalog.
+// Empty defaults to DQ (the original product) so older clients keep working.
+func (h *Handler) resolveProduct(code string) (productModule, error) {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		code = "DQ"
+	}
+	list, err := h.loadProducts()
+	if err != nil {
+		return productModule{}, err
+	}
+	for _, p := range list {
+		if p.Code == code {
+			if p.Status == "COMING_SOON" {
+				return p, fmt.Errorf("product %s is not yet available", p.Name)
+			}
+			return p, nil
+		}
+	}
+	return productModule{}, fmt.Errorf("unknown product module: %s", code)
+}
+
 // ---------------- Workspaces ----------------
 
 func (h *Handler) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
 	uid := middleware.UserID(r.Context())
 	rows, err := h.ctrl.Query(`
-		SELECT w.workspace_id, w.workspace_name, w.customer_name, w.description, w.created_at, r.role_code
+		SELECT w.workspace_id, w.workspace_name, w.customer_name, w.description, w.created_at, r.role_code,
+		       w.product_code, COALESCE(pm.product_name, w.product_code), COALESCE(pm.status, 'ACTIVE')
 		FROM workspaces w
 		JOIN user_workspace_roles uwr ON uwr.workspace_id = w.workspace_id
 		JOIN roles r ON r.role_id = uwr.role_id
+		LEFT JOIN product_modules pm ON pm.product_code = w.product_code
 		WHERE uwr.user_id = ?
 		ORDER BY w.created_at DESC`, uid)
 	if err != nil {
@@ -144,12 +217,13 @@ func (h *Handler) ListWorkspaces(w http.ResponseWriter, r *http.Request) {
 	list := []map[string]interface{}{}
 	for rows.Next() {
 		var id int64
-		var name, customer, desc, role string
+		var name, customer, desc, role, pcode, pname, pstatus string
 		var created time.Time
-		_ = rows.Scan(&id, &name, &customer, &desc, &created, &role)
+		_ = rows.Scan(&id, &name, &customer, &desc, &created, &role, &pcode, &pname, &pstatus)
 		list = append(list, map[string]interface{}{
 			"workspaceId": id, "workspaceName": name, "customerName": customer,
 			"description": desc, "createdAt": created, "role": role,
+			"productCode": pcode, "productName": pname, "productStatus": pstatus,
 		})
 	}
 	writeJSON(w, 200, list)
@@ -161,6 +235,7 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		WorkspaceName string `json:"workspaceName"`
 		CustomerName  string `json:"customerName"`
 		Description   string `json:"description"`
+		ProductCode   string `json:"productCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.WorkspaceName == "" {
 		writeErr(w, 400, "workspaceName required")
@@ -169,8 +244,15 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	if body.CustomerName == "" {
 		body.CustomerName = body.WorkspaceName
 	}
-	res, err := h.ctrl.Exec(`INSERT INTO workspaces (workspace_name, customer_name, description, created_by) VALUES (?,?,?,?)`,
-		body.WorkspaceName, body.CustomerName, body.Description, uid)
+	product, err := h.resolveProduct(body.ProductCode)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	res, err := h.ctrl.Exec(`
+		INSERT INTO workspaces (workspace_name, customer_name, description, product_code, created_by)
+		VALUES (?,?,?,?,?)`,
+		body.WorkspaceName, body.CustomerName, body.Description, product.Code, uid)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -180,17 +262,23 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	_ = h.ctrl.QueryRow(`SELECT role_id FROM roles WHERE role_code='ADMIN'`).Scan(&roleID)
 	_, _ = h.ctrl.Exec(`INSERT INTO user_workspace_roles (user_id, workspace_id, role_id) VALUES (?,?,?)`, uid, wsID, roleID)
 
-	// seed default pipelines for new workspace
-	procs := []struct{ n, p, d string }{
-		{"CDR Unrated Completeness", "sp_dq_cdr_unrated", "Detects CDRs without rated_usage"},
-		{"Invoice Balance Consistency", "sp_dq_invoice_balance", "Invoice total vs line items"},
-		{"MSISDN Validity", "sp_dq_msisdn_validity", "Invalid service identifiers"},
+	// Product-specific bootstrap. Reveal DQ seeds its sample warehouse jobs; other
+	// modules start empty until their own bootstrap is defined.
+	if product.Code == "DQ" {
+		procs := []struct{ n, p, d string }{
+			{"CDR Unrated Completeness", "sp_dq_cdr_unrated", "Detects CDRs without rated_usage"},
+			{"Invoice Balance Consistency", "sp_dq_invoice_balance", "Invoice total vs line items"},
+			{"MSISDN Validity", "sp_dq_msisdn_validity", "Invalid service identifiers"},
+		}
+		for _, p := range procs {
+			_, _ = h.ctrl.Exec(`INSERT INTO dq_pipelines (workspace_id, pipeline_name, proc_name, description) VALUES (?,?,?,?)`,
+				wsID, p.n, p.p, p.d)
+		}
 	}
-	for _, p := range procs {
-		_, _ = h.ctrl.Exec(`INSERT INTO dq_pipelines (workspace_id, pipeline_name, proc_name, description) VALUES (?,?,?,?)`,
-			wsID, p.n, p.p, p.d)
-	}
-	writeJSON(w, 201, map[string]interface{}{"workspaceId": wsID, "workspaceName": body.WorkspaceName})
+	writeJSON(w, 201, map[string]interface{}{
+		"workspaceId": wsID, "workspaceName": body.WorkspaceName,
+		"productCode": product.Code, "productName": product.Name,
+	})
 }
 
 func (h *Handler) GetWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -199,10 +287,15 @@ func (h *Handler) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad id")
 		return
 	}
-	var name, customer, desc string
+	var name, customer, desc, pcode, pname, pstatus string
 	var created time.Time
-	err = h.ctrl.QueryRow(`SELECT workspace_name, customer_name, description, created_at FROM workspaces WHERE workspace_id=?`, id).
-		Scan(&name, &customer, &desc, &created)
+	err = h.ctrl.QueryRow(`
+		SELECT w.workspace_name, w.customer_name, w.description, w.created_at,
+		       w.product_code, COALESCE(pm.product_name, w.product_code), COALESCE(pm.status, 'ACTIVE')
+		FROM workspaces w
+		LEFT JOIN product_modules pm ON pm.product_code = w.product_code
+		WHERE w.workspace_id=?`, id).
+		Scan(&name, &customer, &desc, &created, &pcode, &pname, &pstatus)
 	if err != nil {
 		writeErr(w, 404, "not found")
 		return
@@ -210,6 +303,7 @@ func (h *Handler) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]interface{}{
 		"workspaceId": id, "workspaceName": name, "customerName": customer,
 		"description": desc, "createdAt": created,
+		"productCode": pcode, "productName": pname, "productStatus": pstatus,
 	})
 }
 
@@ -217,8 +311,10 @@ func (h *Handler) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListConnections(w http.ResponseWriter, r *http.Request) {
 	id, _ := wsID(r)
+	h.ensureConnectionSchema()
 	rows, err := h.ctrl.Query(`
-		SELECT connection_id, connection_name, db_type, host, port, database_name, username, is_active, created_at
+		SELECT connection_id, connection_name, db_type, host, port, database_name, username,
+		       COALESCE(http_path,''), COALESCE(extra_config,'{}'), is_active, created_at
 		FROM data_connections WHERE workspace_id=? ORDER BY connection_id`, id)
 	if err != nil {
 		writeErr(w, 500, err.Error())
@@ -228,44 +324,68 @@ func (h *Handler) ListConnections(w http.ResponseWriter, r *http.Request) {
 	list := []map[string]interface{}{}
 	for rows.Next() {
 		var cid int64
-		var cname, dbType, host, dbName, user string
+		var cname, dbType, host, dbName, user, httpPath, extra string
 		var port int
 		var active bool
 		var created time.Time
-		_ = rows.Scan(&cid, &cname, &dbType, &host, &port, &dbName, &user, &active, &created)
+		_ = rows.Scan(&cid, &cname, &dbType, &host, &port, &dbName, &user, &httpPath, &extra, &active, &created)
 		list = append(list, map[string]interface{}{
 			"connectionId": cid, "connectionName": cname, "dbType": dbType,
 			"host": host, "port": port, "databaseName": dbName, "username": user,
+			"httpPath": httpPath, "extra": jsonRaw(sql.NullString{String: extra, Valid: extra != ""}),
 			"isActive": active, "createdAt": created,
 		})
 	}
 	writeJSON(w, 200, list)
 }
 
+var defaultPorts = map[string]int{"MYSQL": 3306, "SQLSERVER": 1433, "DATABRICKS": 443}
+
 func (h *Handler) CreateConnection(w http.ResponseWriter, r *http.Request) {
 	id, _ := wsID(r)
+	h.ensureConnectionSchema()
 	var body struct {
-		ConnectionName string `json:"connectionName"`
-		Host           string `json:"host"`
-		Port           int    `json:"port"`
-		DatabaseName   string `json:"databaseName"`
-		Username       string `json:"username"`
-		Password       string `json:"password"`
+		ConnectionName string          `json:"connectionName"`
+		DbType         string          `json:"dbType"`
+		Host           string          `json:"host"`
+		Port           int             `json:"port"`
+		DatabaseName   string          `json:"databaseName"`
+		Username       string          `json:"username"`
+		Password       string          `json:"password"`
+		HTTPPath       string          `json:"httpPath"`
+		Extra          json.RawMessage `json:"extra"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeErr(w, 400, "invalid body")
 		return
 	}
+	dbType := strings.ToUpper(strings.TrimSpace(body.DbType))
+	if dbType == "" {
+		dbType = "MYSQL"
+	}
+	if _, ok := defaultPorts[dbType]; !ok {
+		writeErr(w, 400, "unsupported dbType: "+dbType)
+		return
+	}
 	if body.Port == 0 {
-		body.Port = 3306
+		body.Port = defaultPorts[dbType]
 	}
 	if body.DatabaseName == "" {
-		body.DatabaseName = "RevealDQ"
+		body.DatabaseName = "default"
+	}
+	extra := string(body.Extra)
+	if strings.TrimSpace(extra) == "" {
+		extra = "{}"
+	}
+	sealed, err := h.box.Seal(body.Password)
+	if err != nil {
+		writeErr(w, 500, "could not protect connection secret")
+		return
 	}
 	res, err := h.ctrl.Exec(`
-		INSERT INTO data_connections (workspace_id, connection_name, db_type, host, port, database_name, username, password_enc)
-		VALUES (?,?,'MYSQL',?,?,?,?,?)`,
-		id, body.ConnectionName, body.Host, body.Port, body.DatabaseName, body.Username, body.Password)
+		INSERT INTO data_connections (workspace_id, connection_name, db_type, host, port, database_name, username, password_enc, http_path, extra_config)
+		VALUES (?,?,?,?,?,?,?,?,?,?)`,
+		id, body.ConnectionName, dbType, body.Host, body.Port, body.DatabaseName, body.Username, sealed, body.HTTPPath, extra)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -274,33 +394,76 @@ func (h *Handler) CreateConnection(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 201, map[string]interface{}{"connectionId": cid})
 }
 
-func (h *Handler) TestConnection(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteConnection(w http.ResponseWriter, r *http.Request) {
 	ws, _ := wsID(r)
 	connID, _ := strconv.ParseInt(chi.URLParam(r, "connId"), 10, 64)
-	var host, dbName, user, pass string
+	res, err := h.ctrl.Exec(`DELETE FROM data_connections WHERE connection_id=? AND workspace_id=?`, connID, ws)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	n, _ := res.RowsAffected()
+	writeJSON(w, 200, map[string]interface{}{"deleted": n > 0, "connectionId": connID})
+}
+
+func (h *Handler) TestConnection(w http.ResponseWriter, r *http.Request) {
+	ws, _ := wsID(r)
+	h.ensureConnectionSchema()
+	connID, _ := strconv.ParseInt(chi.URLParam(r, "connId"), 10, 64)
+	var dbType, host, dbName, user, pass, httpPath, extra string
 	var port int
 	err := h.ctrl.QueryRow(`
-		SELECT host, port, database_name, username, password_enc
+		SELECT db_type, host, port, database_name, username, password_enc, COALESCE(http_path,''), COALESCE(extra_config,'{}')
 		FROM data_connections WHERE connection_id=? AND workspace_id=?`, connID, ws).
-		Scan(&host, &port, &dbName, &user, &pass)
+		Scan(&dbType, &host, &port, &dbName, &user, &pass, &httpPath, &extra)
 	if err != nil {
 		writeErr(w, 404, "connection not found")
 		return
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=5s", user, pass, host, port, dbName)
-	test, err := sql.Open("mysql", dsn)
+	pass, err = h.box.Open(pass)
 	if err != nil {
-		writeJSON(w, 200, map[string]interface{}{"ok": false, "error": err.Error()})
+		writeErr(w, 500, "could not read connection secret")
 		return
 	}
-	defer test.Close()
-	if err := test.Ping(); err != nil {
-		writeJSON(w, 200, map[string]interface{}{"ok": false, "error": err.Error()})
+
+	switch strings.ToUpper(dbType) {
+	case "DATABRICKS":
+		ok, status, msg := h.testDatabricks(host, httpPath, user, pass, extra)
+		writeJSON(w, 200, map[string]interface{}{"ok": ok, "status": status, "message": msg, "error": ifNot(ok, msg)})
 		return
+	case "SQLSERVER":
+		writeJSON(w, 200, map[string]interface{}{
+			"ok": false, "status": "placeholder",
+			"message": "SQL Server connector is a placeholder — connectivity is not implemented yet.",
+			"error":   "SQL Server connector is a placeholder — connectivity is not implemented yet.",
+		})
+		return
+	default: // MYSQL
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=5s", user, pass, host, port, dbName)
+		test, err := sql.Open("mysql", dsn)
+		if err != nil {
+			writeJSON(w, 200, map[string]interface{}{"ok": false, "status": "failed", "error": err.Error()})
+			return
+		}
+		defer test.Close()
+		if err := test.Ping(); err != nil {
+			writeJSON(w, 200, map[string]interface{}{"ok": false, "status": "failed", "error": err.Error()})
+			return
+		}
+		var tables int
+		_ = test.QueryRow(`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=?`, dbName).Scan(&tables)
+		writeJSON(w, 200, map[string]interface{}{
+			"ok": true, "status": "connected", "tableCount": tables,
+			"message": fmt.Sprintf("Connected — %d tables in %s.", tables, dbName),
+		})
 	}
-	var tables int
-	_ = test.QueryRow(`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=?`, dbName).Scan(&tables)
-	writeJSON(w, 200, map[string]interface{}{"ok": true, "tableCount": tables})
+}
+
+func ifNot(ok bool, msg string) string {
+	if ok {
+		return ""
+	}
+	return msg
 }
 
 // ---------------- Rules ----------------
@@ -344,19 +507,35 @@ func jsonRaw(ns sql.NullString) interface{} {
 	return v
 }
 
+// ruleAuditPayload carries the traceability captured on the DQ Analyser screen
+// when an analyst saves a recommended rule.
+type ruleAuditPayload struct {
+	Prompt       string          `json:"prompt"`
+	Conversation json.RawMessage `json:"conversation"`
+	ToolTraces   json.RawMessage `json:"toolTraces"`
+	ModelUsed    string          `json:"modelUsed"`
+	DataSource   string          `json:"dataSource"`
+	Impact       *struct {
+		ImpactedCount   int64   `json:"impactedCount"`
+		TotalCount      int64   `json:"totalCount"`
+		ImpactedPercent float64 `json:"impactedPercent"`
+	} `json:"impact"`
+}
+
 func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	id, _ := wsID(r)
 	uid := middleware.UserID(r.Context())
 	var body struct {
-		RuleName             string          `json:"ruleName"`
-		Dimension            string          `json:"dimension"`
-		BusinessDefinition   string          `json:"businessDefinition"`
-		TechnicalDefinition  string          `json:"technicalDefinition"`
-		ImpactedTables       json.RawMessage `json:"impactedTables"`
-		ImpactedColumns      json.RawMessage `json:"impactedColumns"`
-		CheckSQL             string          `json:"checkSql"`
-		Status               string          `json:"status"`
-		ProcName             string          `json:"procName"`
+		RuleName            string            `json:"ruleName"`
+		Dimension           string            `json:"dimension"`
+		BusinessDefinition  string            `json:"businessDefinition"`
+		TechnicalDefinition string            `json:"technicalDefinition"`
+		ImpactedTables      json.RawMessage   `json:"impactedTables"`
+		ImpactedColumns     json.RawMessage   `json:"impactedColumns"`
+		CheckSQL            string            `json:"checkSql"`
+		Status              string            `json:"status"`
+		ProcName            string            `json:"procName"`
+		Audit               *ruleAuditPayload `json:"audit"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeErr(w, 400, "invalid body")
@@ -365,6 +544,28 @@ func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	if body.Status == "" {
 		body.Status = "DRAFT"
 	}
+	if rejectBadCheckSQL(w, body.CheckSQL) {
+		return
+	}
+	dim := strings.ToUpper(body.Dimension)
+
+	existing, err := h.loadRules(id)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	if dup, reason, ok := findDuplicate(existing, body.RuleName, dim, body.CheckSQL); ok {
+		why := "the same name"
+		if reason == "check" {
+			why = "the same dimension and check SQL"
+		}
+		writeJSON(w, 200, map[string]interface{}{
+			"ruleId": dup.ID, "duplicate": true, "reason": reason, "status": dup.Status,
+			"message": fmt.Sprintf("Rule already exists with ID %d (%s, %s)", dup.ID, dup.Status, why),
+		})
+		return
+	}
+
 	tables := string(body.ImpactedTables)
 	cols := string(body.ImpactedColumns)
 	if tables == "" {
@@ -377,14 +578,179 @@ func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO dq_rules (workspace_id, rule_name, dimension, business_definition, technical_definition,
 		  impacted_tables, impacted_columns, check_sql, status, proc_name, created_by)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-		id, body.RuleName, strings.ToUpper(body.Dimension), body.BusinessDefinition, body.TechnicalDefinition,
+		id, body.RuleName, dim, body.BusinessDefinition, body.TechnicalDefinition,
 		tables, cols, body.CheckSQL, body.Status, nullIfEmpty(body.ProcName), uid)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
 	}
 	rid, _ := res.LastInsertId()
-	writeJSON(w, 201, map[string]interface{}{"ruleId": rid})
+
+	// Persist the traceability record for every saved rule (non-fatal on failure).
+	if err := h.saveRuleAudit(id, rid, uid, body.RuleName, dim, body.CheckSQL, body.Status, body.Audit); err != nil {
+		log.Printf("rule audit save failed (rule %d): %v", rid, err)
+	}
+
+	writeJSON(w, 201, map[string]interface{}{"ruleId": rid, "duplicate": false})
+}
+
+// EditRule updates the editable content of a rule: business/technical definitions
+// and the check SQL. Status and identity are not changed here.
+func (h *Handler) EditRule(w http.ResponseWriter, r *http.Request) {
+	ws, _ := wsID(r)
+	ruleID, _ := strconv.ParseInt(chi.URLParam(r, "ruleId"), 10, 64)
+	var body struct {
+		BusinessDefinition  string `json:"businessDefinition"`
+		TechnicalDefinition string `json:"technicalDefinition"`
+		CheckSQL            string `json:"checkSql"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, 400, "invalid body")
+		return
+	}
+	if rejectBadCheckSQL(w, body.CheckSQL) {
+		return
+	}
+	_, err := h.ctrl.Exec(
+		`UPDATE dq_rules SET business_definition=?, technical_definition=?, check_sql=?
+		 WHERE rule_id=? AND workspace_id=?`,
+		body.BusinessDefinition, body.TechnicalDefinition, body.CheckSQL, ruleID, ws)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]interface{}{"ruleId": ruleID, "updated": true})
+}
+
+// DeleteRule hard-deletes a rule (used when a recommendation is rejected). The
+// rule is never physicalised; its audit rows are removed alongside it.
+func (h *Handler) DeleteRule(w http.ResponseWriter, r *http.Request) {
+	ws, _ := wsID(r)
+	ruleID, _ := strconv.ParseInt(chi.URLParam(r, "ruleId"), 10, 64)
+	h.ensureAuditTable()
+	_, _ = h.ctrl.Exec(`DELETE FROM dq_rule_audit WHERE rule_id=? AND workspace_id=?`, ruleID, ws)
+	res, err := h.ctrl.Exec(`DELETE FROM dq_rules WHERE rule_id=? AND workspace_id=?`, ruleID, ws)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	n, _ := res.RowsAffected()
+	writeJSON(w, 200, map[string]interface{}{"deleted": n > 0, "ruleId": ruleID})
+}
+
+var auditTableOnce sync.Once
+
+func (h *Handler) ensureAuditTable() {
+	auditTableOnce.Do(func() {
+		_, err := h.ctrl.Exec(`
+			CREATE TABLE IF NOT EXISTS dq_rule_audit (
+			    audit_id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+			    rule_id          BIGINT UNSIGNED NULL,
+			    workspace_id     BIGINT UNSIGNED NOT NULL,
+			    rule_name        VARCHAR(200) NOT NULL,
+			    dimension        VARCHAR(40) NULL,
+			    prompt           TEXT,
+			    conversation     JSON,
+			    tool_traces      JSON,
+			    model_used       VARCHAR(100) NULL,
+			    data_source      VARCHAR(20) NULL,
+			    impacted_count   BIGINT NULL,
+			    total_count      BIGINT NULL,
+			    impacted_percent DECIMAL(7,2) NULL,
+			    check_sql        TEXT,
+			    status           VARCHAR(20) NULL,
+			    created_by       BIGINT UNSIGNED NULL,
+			    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			    KEY idx_audit_ws (workspace_id),
+			    KEY idx_audit_rule (rule_id)
+			) ENGINE=InnoDB`)
+		if err != nil {
+			log.Printf("ensure dq_rule_audit: %v", err)
+		}
+	})
+}
+
+func (h *Handler) saveRuleAudit(ws, ruleID, uid int64, ruleName, dim, checkSQL, status string, a *ruleAuditPayload) error {
+	h.ensureAuditTable()
+	if a == nil {
+		a = &ruleAuditPayload{}
+	}
+	conv := string(a.Conversation)
+	if conv == "" {
+		conv = "[]"
+	}
+	traces := string(a.ToolTraces)
+	if traces == "" {
+		traces = "[]"
+	}
+	var ic, tc, pct interface{}
+	if a.Impact != nil {
+		ic = a.Impact.ImpactedCount
+		tc = a.Impact.TotalCount
+		pct = a.Impact.ImpactedPercent
+	}
+	_, err := h.ctrl.Exec(`
+		INSERT INTO dq_rule_audit (rule_id, workspace_id, rule_name, dimension, prompt, conversation,
+		  tool_traces, model_used, data_source, impacted_count, total_count, impacted_percent,
+		  check_sql, status, created_by)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		ruleID, ws, ruleName, nullIfEmpty(dim), nullIfEmpty(a.Prompt), conv, traces,
+		nullIfEmpty(a.ModelUsed), nullIfEmpty(a.DataSource), ic, tc, pct,
+		nullIfEmpty(checkSQL), nullIfEmpty(status), uid)
+	return err
+}
+
+// ListRuleAudit returns the traceability trail for saved rules (for the audit screen).
+func (h *Handler) ListRuleAudit(w http.ResponseWriter, r *http.Request) {
+	id, _ := wsID(r)
+	h.ensureAuditTable()
+	rows, err := h.ctrl.Query(`
+		SELECT audit_id, rule_id, rule_name, dimension, prompt, conversation, tool_traces,
+		       model_used, data_source, impacted_count, total_count, impacted_percent,
+		       check_sql, status, created_by, created_at
+		FROM dq_rule_audit WHERE workspace_id=? ORDER BY audit_id DESC`, id)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	defer rows.Close()
+	list := []map[string]interface{}{}
+	for rows.Next() {
+		var auditID int64
+		var ruleID sql.NullInt64
+		var ic, tc sql.NullInt64
+		var pct sql.NullFloat64
+		var createdBy sql.NullInt64
+		var name string
+		var dim, prompt, conv, traces, model, dsrc, checkSQL, status sql.NullString
+		var created time.Time
+		_ = rows.Scan(&auditID, &ruleID, &name, &dim, &prompt, &conv, &traces,
+			&model, &dsrc, &ic, &tc, &pct, &checkSQL, &status, &createdBy, &created)
+		list = append(list, map[string]interface{}{
+			"auditId": auditID, "ruleId": nullInt(ruleID), "ruleName": name,
+			"dimension": dim.String, "prompt": prompt.String,
+			"conversation": jsonRaw(conv), "toolTraces": jsonRaw(traces),
+			"modelUsed": model.String, "dataSource": dsrc.String,
+			"impactedCount": nullInt(ic), "totalCount": nullInt(tc),
+			"impactedPercent": nullFloat(pct), "checkSql": checkSQL.String,
+			"status": status.String, "createdBy": nullInt(createdBy), "createdAt": created,
+		})
+	}
+	writeJSON(w, 200, list)
+}
+
+func nullInt(n sql.NullInt64) interface{} {
+	if !n.Valid {
+		return nil
+	}
+	return n.Int64
+}
+
+func nullFloat(n sql.NullFloat64) interface{} {
+	if !n.Valid {
+		return nil
+	}
+	return n.Float64
 }
 
 func nullIfEmpty(s string) interface{} {
@@ -402,6 +768,13 @@ func (h *Handler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeErr(w, 400, "invalid body")
+		return
+	}
+	body.Status = strings.ToUpper(strings.TrimSpace(body.Status))
+	switch body.Status {
+	case "DRAFT", "APPROVED", "ACTIVE", "RETIRED":
+	default:
+		writeErr(w, 400, "status must be DRAFT, APPROVED, ACTIVE, or RETIRED")
 		return
 	}
 	_, err := h.ctrl.Exec(`UPDATE dq_rules SET status=? WHERE rule_id=? AND workspace_id=?`, body.Status, ruleID, ws)
@@ -688,21 +1061,75 @@ func (h *Handler) AnalyserChat(w http.ResponseWriter, r *http.Request) {
 	}
 	payload["workspaceId"] = ws
 
-	// attach active connection if present
+	// Attach the active MySQL warehouse connection. Multi-driver workspaces may
+	// also have Databricks/etc. marked active; those must not be handed to the
+	// MySQL MCP analyser bridge (host:443 + PAT looks like a dead MCP channel).
 	var host, dbName, user, pass string
 	var port int
 	err = h.ctrl.QueryRow(`
 		SELECT host, port, database_name, username, password_enc
-		FROM data_connections WHERE workspace_id=? AND is_active=1 ORDER BY connection_id DESC LIMIT 1`, ws).
+		FROM data_connections
+		WHERE workspace_id=? AND is_active=1 AND UPPER(db_type)='MYSQL'
+		ORDER BY connection_id DESC LIMIT 1`, ws).
 		Scan(&host, &port, &dbName, &user, &pass)
 	if err == nil {
-		payload["connection"] = map[string]interface{}{
-			"host": host, "port": port, "database": dbName, "username": user, "password": pass,
+		plain, oerr := h.box.Open(pass)
+		if oerr != nil {
+			log.Printf("analyser: connection secret: %v", oerr)
+		} else {
+			// Password stays off the chat body. The agent redeems this once.
+			payload["connection"] = map[string]interface{}{
+				"host": host, "port": port, "database": dbName, "username": user,
+				"handoff": h.putHandoff(connectionHandoff{
+					Host: host, Port: port, Database: dbName, Username: user, Password: plain,
+				}),
+			}
+		}
+	}
+	if msg, _ := payload["message"].(string); strings.TrimSpace(msg) != "" {
+		if rules, rerr := h.loadRules(ws); rerr == nil {
+			payload["existingRules"] = catalogueForAgent(matchRules(rules, ruleQuery{Q: msg, Limit: 8}))
 		}
 	}
 
 	out, _ := json.Marshal(payload)
 	resp, err := http.Post(h.cfg.AgentURL+"/chat", "application/json", bytes.NewReader(out))
+	if err != nil {
+		writeErr(w, 502, "agent unreachable: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
+}
+
+// EtlAnalyze proxies ETL/SQL file analysis and follow-up questions to the agent.
+func (h *Handler) EtlAnalyze(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 8<<20)) // 8 MB cap
+	if err != nil {
+		writeErr(w, 400, "bad body")
+		return
+	}
+	resp, err := http.Post(h.cfg.AgentURL+"/etl/analyze", "application/json", bytes.NewReader(body))
+	if err != nil {
+		writeErr(w, 502, "agent unreachable: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
+}
+
+// EtlExplainNode proxies a single graph-node explanation request to the agent.
+func (h *Handler) EtlExplainNode(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 8<<20))
+	if err != nil {
+		writeErr(w, 400, "bad body")
+		return
+	}
+	resp, err := http.Post(h.cfg.AgentURL+"/etl/explain-node", "application/json", bytes.NewReader(body))
 	if err != nil {
 		writeErr(w, 502, "agent unreachable: "+err.Error())
 		return

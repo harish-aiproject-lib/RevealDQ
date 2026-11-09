@@ -31,9 +31,19 @@
   --grad-accent: linear-gradient(120deg, #fb923c, #f97316);
   --grad-hero: linear-gradient(120deg, #06b6d4 0%, #0ea5e9 55%, #6366f1 110%);
   --avatar-grad: linear-gradient(135deg, #06b6d4, #6366f1);
+
+  /* Reveal VoC accent (violet family) */
+  --violet: #8b5cf6;
+  --violet-ink: #7c3aed;
+  --violet-soft: rgba(139, 92, 246, 0.12);
+  --grad-violet: linear-gradient(120deg, #a78bfa 0%, #8b5cf6 55%, #ec4899 110%);
 }
 
 [data-theme='dark'] {
+  --violet: #a78bfa;
+  --violet-ink: #c4b5fd;
+  --violet-soft: rgba(167, 139, 250, 0.16);
+  --grad-violet: linear-gradient(120deg, #c4b5fd 0%, #a78bfa 55%, #f472b6 110%);
   --cyan: #22d3ee;
   --teal: #67e8f9;
   --cyan-ink: #22d3ee;
@@ -308,6 +318,35 @@ label {
   background: var(--surface-2);
   color: var(--muted);
   border: 1px solid var(--line);
+}
+
+/* ---------- product-module accents (Reality Reveal) ---------- */
+
+.tag.product-cyan {
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+}
+
+.tag.product-violet {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.tag.preview {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.head-icon.product-violet,
+.card-icon.product-violet {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.head-icon.product-cyan,
+.card-icon.product-cyan {
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
 }
 
 /* ---------- code & tables ---------- */

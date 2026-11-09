@@ -1,1 +1,44 @@
 @use '../shell' as *;
+
+.module-status {
+  margin-top: 0.5rem;
+  justify-self: start;
+}
+
+.eyebrow.violet {
+  color: var(--violet-ink);
+}
+
+/* Reveal VoC projects swap the cyan explorer highlight for the violet family. */
+.layout.accent-violet {
+  .explorer a.active {
+    background: linear-gradient(90deg, rgba(167, 139, 250, 0.22), rgba(167, 139, 250, 0.05));
+    color: #ddd6fe;
+    box-shadow: inset 2.5px 0 0 #a78bfa;
+  }
+
+  .explorer a:hover app-icon,
+  .explorer a.active app-icon {
+    color: #a78bfa;
+  }
+
+  .icon-stack a:hover,
+  .icon-stack a.active {
+    background: rgba(167, 139, 250, 0.18);
+    color: #a78bfa;
+  }
+
+  .ribbon .collapse:hover {
+    background: rgba(167, 139, 250, 0.2);
+    color: #ddd6fe;
+  }
+
+  .banner::after {
+    background: linear-gradient(90deg, var(--violet), transparent 55%, var(--orange));
+  }
+
+  .home-btn:hover {
+    color: var(--violet-ink);
+    border-color: var(--violet);
+  }
+}

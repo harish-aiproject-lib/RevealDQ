@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reveal DQ — Automation vs AI &amp; Agents</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --ai: #6d28d9;
+      --ai-soft: #ede9fe;
+      --ai-line: #7c3aed;
+      --auto: #0f766e;
+      --auto-soft: #ccfbf1;
+      --auto-line: #0d9488;
+      --hyb: #b45309;
+      --hyb-soft: #ffedd5;
+      --plat: #1e3a5f;
+      --plat-soft: #e0e7ff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    header.hero {
+      background: linear-gradient(135deg, #0b1220 0%, #1e1b4b 55%, #134e4a 100%);
+      color: #f8fafc;
+      padding: 48px 32px 40px;
+    }
+    header.hero .eyebrow {
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      opacity: .75;
+    }
+    header.hero h1 { margin: 8px 0 12px; font-size: 34px; font-weight: 650; }
+    header.hero p { max-width: 820px; color: #cbd5e1; margin: 0 0 20px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600;
+    }
+    .pill .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .pill.ai { background: #5b21b6; color: #ede9fe; }
+    .pill.auto { background: #115e59; color: #ccfbf1; }
+    .pill.hyb { background: #9a3412; color: #ffedd5; }
+    .pill.plat { background: #1e3a5f; color: #dbeafe; }
+    nav.toc {
+      position: sticky; top: 0; z-index: 5;
+      background: rgba(248,250,252,.92); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 24px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px;
+    }
+    nav.toc a { color: var(--muted); text-decoration: none; }
+    nav.toc a:hover { color: var(--ink); }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+    section { margin: 0 0 48px; }
+    h2 { font-size: 24px; margin: 0 0 8px; }
+    h3 { font-size: 18px; margin: 28px 0 8px; }
+    .lede { color: var(--muted); margin: 0 0 18px; max-width: 860px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px 18px 12px; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .card h3 { margin-top: 0; }
+    .card.ai { border-top: 4px solid var(--ai-line); }
+    .card.auto { border-top: 4px solid var(--auto-line); }
+    .card.hyb { border-top: 4px solid var(--hyb); }
+    ul.tight { margin: 8px 0 12px; padding-left: 18px; }
+    ul.tight li { margin: 4px 0; }
+    code, kbd {
+      font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      font-size: 12.5px; background: #f1f5f9; padding: 1px 6px; border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: #fff; }
+    th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+    .tag {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+      padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+    }
+    .tag.ai { background: var(--ai-soft); color: var(--ai); }
+    .tag.auto { background: var(--auto-soft); color: var(--auto); }
+    .tag.hyb { background: var(--hyb-soft); color: var(--hyb); }
+    .tag.plat { background: var(--plat-soft); color: var(--plat); }
+    .mermaid {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      padding: 16px; overflow-x: auto;
+    }
+    .callout {
+      border-left: 4px solid var(--ai-line); background: var(--ai-soft);
+      padding: 12px 14px; border-radius: 0 10px 10px 0; margin: 12px 0 0;
+    }
+    .callout.auto { border-left-color: var(--auto-line); background: var(--auto-soft); }
+    .small { font-size: 12.5px; color: var(--muted); }
+    footer { color: #64748b; font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 16px; }
+    @media (max-width: 860px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      header.hero h1 { font-size: 26px; }
+    }
+    @media print {
+      nav.toc { display: none; }
+      header.hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .mermaid { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="eyebrow">Reveal DQ · Architecture documentation</div>
+    <h1>Automation vs AI &amp; Agents</h1>
+    <p>
+      Low-level map of the Reveal DQ platform: which runtime paths are deterministic
+      automation (CRUD, ACL, SQL jobs, stored procedures) and which are AI / agent
+      loops (Claude, MCP tools, ETL reasoning, code conversion). Generated from the
+      current codebase — Angular UI, Go API, Python FastAPI agent, MySQL control plane
+      and warehouse.
+    </p>
+    <div class="legend">
+      <span class="pill plat"><span class="dot" style="background:#93c5fd"></span> Platform (UI / API / DB)</span>
+      <span class="pill auto"><span class="dot" style="background:#5eead4"></span> Deterministic automation</span>
+      <span class="pill ai"><span class="dot" style="background:#c4b5fd"></span> AI / agent</span>
+      <span class="pill hyb"><span class="dot" style="background:#fdba74"></span> Hybrid (AI proposes, automation persists / runs)</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#split">1. Split</a>
+    <a href="#runtime">2. Runtime</a>
+    <a href="#e2e">3. End-to-end</a>
+    <a href="#analyser">4. DQ Analyser</a>
+    <a href="#etl">5. ETL Analyser</a>
+    <a href="#convert">6. Conversion</a>
+    <a href="#ops">7. Rules &amp; jobs</a>
+    <a href="#matrix">8. File / API matrix</a>
+  </nav>
+
+  <main>
+    <section id="split">
+      <h2>1. What is automation vs what is an agent</h2>
+      <p class="lede">
+        Reveal DQ is not “all AI”. The product is a governed data-quality control plane.
+        Agents inspect and recommend. Automation authenticates, stores, tests connections,
+        runs SQL jobs, and reports. MCP is a protocol used <em>by</em> the agent; it is not a
+        language model.
+      </p>
+      <div class="grid-2">
+        <article class="card auto">
+          <h3>Automation (deterministic)</h3>
+          <p class="small">Same inputs → same outputs. No LLM. No tool-calling loop.</p>
+          <ul class="tight">
+            <li>Login / JWT / workspace CRUD / screen ACL</li>
+            <li>Save, edit, approve, activate, retire DQ rules</li>
+            <li>MySQL / Databricks connection test (direct ping)</li>
+            <li>Pipeline run: <code>CALL sp_dq_*</code> + write <code>dq_job_runs</code></li>
+            <li>Dashboard aggregations from job history</li>
+            <li>Heuristic parsers: SQL / Informatica XML / SSIS DTSX</li>
+            <li>Flow-graph construction from parsed facts</li>
+            <li>Heuristic ETL→Databricks conversion + code validation</li>
+            <li>Conversion check-in to git, Databricks notebook import, job run</li>
+            <li>MCP stdio server (read-only MySQL tools) — protocol, not AI</li>
+          </ul>
+        </article>
+        <article class="card ai">
+          <h3>AI &amp; agents (reasoning)</h3>
+          <p class="small">Claude (Anthropic) plus an orchestrator that chooses tools / fallbacks.</p>
+          <ul class="tight">
+            <li><strong>DQ Analyser Agent</strong> — <code>POST /chat</code> in <code>agents/main.py</code></li>
+            <li>Intent routing: whole-DB scan vs data Q&amp;A vs “recommend rules”</li>
+            <li>Claude tool loop: <code>list_tables</code>, <code>describe_table</code>, <code>run_select</code></li>
+            <li>Offline heuristics when <code>ANTHROPIC_API_KEY</code> is empty</li>
+            <li><strong>ETL Analyser</strong> follow-up Q&amp;A and node explanations (Claude)</li>
+            <li><strong>Conversion Agent</strong> LLM rewrite of Informatica / SQL / SSIS → Databricks SQL or PySpark</li>
+            <li>Model picker: Sonnet 4 / Haiku 3.5 / Opus 4 (Lakebridge is a placeholder engine)</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">
+        <strong>Handoff rule.</strong> Agents never write warehouse jobs or mutate <code>dq_rules</code> by themselves.
+        The analyst clicks <em>Save to Rules Engine</em>; the Go API inserts a DRAFT rule and an audit row.
+        Execution is a later, fully automated <code>RunPipeline</code> against MySQL stored procedures.
+      </div>
+    </section>
+
+    <section id="runtime">
+      <h2>2. Runtime topology</h2>
+      <p class="lede">Three processes plus two MySQL schemas. Only the Python process on :8090 talks to Claude.</p>
+      <div class="mermaid">
+flowchart LR
+  subgraph UI["Angular UI :4200 — PLATFORM"]
+    A1[analyser.component.ts]
+    A2[etl.component.ts]
+    A3[conversion.component.ts]
+    A4[rules / pipelines / dashboard / config]
+  end
+
+  subgraph API["Go Chi API :8080 — PLATFORM"]
+    P1[AnalyserChat]
+    P2[EtlAnalyze / EtlExplainNode]
+    P3[ConversionAnalyze / ConversionRun]
+    P4["CRUD + TestConnection + RunPipeline"]
+  end
+
+  subgraph AGENT["Python FastAPI :8090 — AI ORCHESTRATOR"]
+    G1["chat() agents/main.py"]
+    G2["etl_analyze / etl_explain_node"]
+    G3["convert_analyze / convert_run"]
+    MCPC[mcp_client.py]
+    MCPS[mcp_server.py stdio]
+  end
+
+  subgraph LLM["External — AI"]
+    CLAUDE[Anthropic Claude]
+  end
+
+  subgraph DATA["MySQL — AUTOMATION STORE"]
+    CTRL[(RevealDQ_ctrl)]
+    WH[(RevealDQ warehouse)]
+    SP[Stored procs sp_dq_*]
+  end
+
+  A1 --> P1 --> G1
+  A2 --> P2 --> G2
+  A3 --> P3 --> G3
+  A4 --> P4
+  P4 --> CTRL
+  P4 --> SP
+  SP --> WH
+  G1 --> MCPC --> MCPS --> WH
+  G1 -.->|if ANTHROPIC_API_KEY| CLAUDE
+  G2 -.-> CLAUDE
+  G3 -.-> CLAUDE
+  P1 -->|attach active MYSQL connection| G1
+      </div>
+      <p class="small">Dashed arrows = optional LLM. Solid arrows = always-on automation or orchestration.</p>
+    </section>
+
+    <section id="e2e">
+      <h2>3. End-to-end product flow (analyst journey)</h2>
+      <p class="lede">Left-to-right: configure → reason → govern → execute → observe. Colour = who does the work.</p>
+      <div class="mermaid">
+flowchart TB
+  subgraph AUTO1["AUTOMATION"]
+    L[Login JWT]
+    W[Create / open workspace]
+    C[Config: save MySQL + optional Databricks]
+    T[TestConnection ping]
+  end
+
+  subgraph AI1["AI / AGENT"]
+    Q[Ask question on DQ Analyser Agent]
+    MCP[MCP list / describe / select]
+    R[Recommended rules + dataPreview]
+  end
+
+  subgraph AUTO2["AUTOMATION"]
+    S[Save DRAFT to dq_rules + dq_rule_audit]
+    G[Approve → ACTIVE in Rules Engine]
+    J[Run pipeline CALL sp_dq_*]
+    D[Dashboard counts from dq_job_runs]
+  end
+
+  subgraph AI2["AI / AGENT — optional parallel tracks"]
+    ETL[Upload SQL / Informatica XML → parse + graph + Claude Q&A]
+    CV[Convert to Databricks SQL / PySpark]
+  end
+
+  subgraph AUTO3["AUTOMATION — conversion deploy"]
+    GIT[Check-in under conversions/wsN]
+    DBX[Import notebook + run Databricks job]
+  end
+
+  L --> W --> C --> T --> Q
+  Q --> MCP --> R --> S --> G --> J --> D
+  W --> ETL
+  W --> CV --> GIT --> DBX
+      </div>
+    </section>
+
+    <section id="analyser">
+      <h2>4. DQ Analyser Agent — low-level call chain</h2>
+      <p class="lede">
+        Screen: <code>management/analyser</code>. This is the primary agent. Files:
+        <code>analyser.component.ts</code> → <code>api.service.ts#chat</code> →
+        <code>handlers.go#AnalyserChat</code> → <code>agents/main.py#chat</code>.
+      </p>
+
+      <h3>4.1 Sequence</h3>
+      <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as AnalyserComponent
+  participant Conv as ConversationService
+  participant API as Go AnalyserChat
+  participant Ctrl as RevealDQ_ctrl
+  participant Agent as FastAPI chat()
+  participant MCP as McpBridge + mcp_server.py
+  participant WH as RevealDQ MySQL
+  participant Claude as Anthropic
+
+  User->>UI: send() question + selectedModel
+  UI->>Conv: appendMessage(user)
+  UI->>API: POST /workspaces/{id}/analyser/chat
+  API->>Ctrl: SELECT active MYSQL connection
+  Note over API,Ctrl: Filters db_type=MYSQL so Databricks is not sent to MCP
+  API->>Agent: POST :8090/chat {message, history, model, connection}
+  Agent->>Agent: build_source(connection)
+  alt DQ_MCP_ENABLED and spawn succeeds
+    Agent->>MCP: initialize + tools/list
+    MCP->>WH: pymysql (list_tables / describe / select)
+    Note over Agent: dataSource = mcp
+  else MCP fail
+    Agent->>WH: direct pymysql
+    Note over Agent: fallback dataSource = mysql
+  end
+
+  Agent->>Agent: is_whole_db_request? wants_rules?
+  Agent->>MCP: assess_metadata() SHOW TABLES + DESCRIBE (cached TTL)
+  alt ANTHROPIC_API_KEY set
+    loop up to 6 tool rounds
+      Agent->>Claude: call_claude(schema + directive)
+      Claude-->>Agent: JSON {answer, tool_calls, recommended_rules, done}
+      Agent->>MCP: execute list_tables / describe_table / run_select
+    end
+    Agent->>Agent: finalize_rules() + compute_impact() + preview_for_rule()
+  else no API key
+    alt wants_rules or whole-DB
+      Agent->>Agent: domain_rules / column_rules / generic_completeness_rules
+    else data question
+      Agent->>Agent: offline_answer() sample rows
+    end
+  end
+  Agent-->>UI: {answer, recommendedRules, dataPreview, toolTraces, dataSource}
+  UI->>Conv: applyResponse()
+  Note over UI: Left: chat. Top-right: rules. Bottom-right: dataset.
+      </div>
+
+      <h3>4.2 Intent router inside <code>chat()</code></h3>
+      <div class="mermaid">
+flowchart TD
+  IN[POST /chat] --> SRC[build_source MCP then MySQL]
+  SRC --> W{is_whole_db_request?}
+  W -->|yes| WDB[whole_db_analyse<br/>profile all tables, rank hotspots]
+  W -->|no| WR{wants_rules?}
+  WR --> KEY{ANTHROPIC_API_KEY?}
+  KEY -->|yes| CL[claude_analyse<br/>tool loop + JSON rules]
+  KEY -->|no + rules| OA[offline_analyse<br/>heuristic SQL rules]
+  KEY -->|no + Q&A| OQ[offline_answer<br/>no recommendedRules]
+  WDB --> OUT[ChatResponse]
+  CL --> FIN[finalize_rules + preview]
+  OA --> FIN
+  OQ --> OUT
+  FIN --> OUT
+      </div>
+
+      <h3>4.3 Functions that do the work</h3>
+      <table>
+        <thead>
+          <tr><th>Function</th><th>File</th><th>Class</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>send()</code></td><td>analyser.component.ts</td><td><span class="tag plat">UI</span></td><td>Posts the question; paints rules + preview</td></tr>
+          <tr><td><code>AnalyserChat</code></td><td>handlers.go</td><td><span class="tag auto">Auto</span></td><td>Attaches MySQL creds; HTTP proxy only</td></tr>
+          <tr><td><code>build_source</code> / <code>_acquire_bridge</code></td><td>main.py</td><td><span class="tag hyb">Hybrid</span></td><td>Prefers MCP stdio session; falls back to pymysql</td></tr>
+          <tr><td><code>McpBridge.start/call</code></td><td>mcp_client.py</td><td><span class="tag auto">Auto</span></td><td>JSON-RPC initialize / tools/call</td></tr>
+          <tr><td><code>tool_list_tables</code> etc.</td><td>mcp_server.py</td><td><span class="tag auto">Auto</span></td><td>Read-only SELECT / SHOW / DESCRIBE</td></tr>
+          <tr><td><code>assess_metadata</code></td><td>main.py</td><td><span class="tag auto">Auto</span></td><td>Full schema sweep, 120s cache</td></tr>
+          <tr><td><code>wants_rules</code> / <code>is_whole_db_request</code></td><td>main.py</td><td><span class="tag auto">Auto</span></td><td>Regex intent — not an LLM</td></tr>
+          <tr><td><code>claude_analyse</code> / <code>call_claude</code></td><td>main.py</td><td><span class="tag ai">AI</span></td><td>Claude JSON protocol + tool loop</td></tr>
+          <tr><td><code>offline_analyse</code> / <code>column_rules</code></td><td>main.py</td><td><span class="tag auto">Auto</span></td><td>Deterministic DQ rule factory when Claude is off</td></tr>
+          <tr><td><code>compute_impact</code> / <code>preview_for_rule</code></td><td>main.py</td><td><span class="tag auto">Auto</span></td><td>Runs check SQL; % failing rows</td></tr>
+          <tr><td><code>CreateRule</code> + <code>saveRuleAudit</code></td><td>handlers.go</td><td><span class="tag auto">Auto</span></td><td>Persist DRAFT + prompt/tool traces</td></tr>
+        </tbody>
+      </table>
+      <div class="callout auto">
+        <strong>MCP is automation, used by an agent.</strong> The analyser is an agent because it
+        plans (intent + optional Claude loop). The MCP subprocess is a dumb, allowlisted SQL tool.
+        UI “MCP connected” currently means “MySQL connection test succeeded”, not “stdio handshake succeeded”.
+      </div>
+    </section>
+
+    <section id="etl">
+      <h2>5. ETL Analyser Agent — low-level call chain</h2>
+      <p class="lede">
+        Screen: <code>management/etl</code>. Parsing and graph layout are automation.
+        Follow-up questions and node click-explanations are AI when a Claude key exists.
+      </p>
+      <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as etl.component.ts
+  participant API as Go EtlAnalyze / EtlExplainNode
+  participant Agent as FastAPI :8090
+  participant Parse as etl_analysis.py
+  participant Graph as etl_graph.py
+  participant Claude as Anthropic
+
+  User->>UI: upload .sql / Informatica .xml
+  UI->>API: POST /workspaces/{id}/etl/analyze {fileName, content}
+  API->>Agent: POST /etl/analyze
+  Agent->>Parse: detect_file_type → analyze_sql | analyze_informatica
+  Parse-->>Agent: metrics, steps, facts, summaryMarkdown
+  Agent->>Graph: build_graph(analysis)
+  Graph-->>Agent: nodes + edges (layered)
+  Agent-->>UI: analysis mode (template answer, no LLM)
+  User->>UI: ask a question about the file
+  UI->>API: same endpoint with message + history
+  Agent->>Agent: etl_followup()
+  alt API key
+    Agent->>Claude: ETL_SYSTEM_PROMPT + parsed facts + file excerpt
+    Claude-->>UI: markdown answer
+  else
+    Agent->>Parse: heuristic_answer()
+  end
+  User->>UI: click a graph node
+  UI->>API: POST /etl/explain-node
+  Agent->>Agent: type_note + upstream/downstream
+  alt API key
+    Agent->>Claude: 2–4 sentence explanation
+  else
+    Agent-->>UI: heuristic sentence
+  end
+      </div>
+      <table>
+        <thead><tr><th>Step</th><th>Code</th><th>Class</th></tr></thead>
+        <tbody>
+          <tr><td>Detect SQL vs Informatica XML</td><td><code>etl_analysis.detect_file_type</code></td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td>Parse statements / mappings / connectors</td><td><code>analyze_sql</code> / <code>analyze_informatica</code></td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td>Build directed flow graph</td><td><code>etl_graph.build_graph</code></td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td>First-load narrative</td><td>template string in <code>etl_analyze</code></td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td>Chat follow-up</td><td><code>etl_followup</code> → Claude or <code>heuristic_answer</code></td><td><span class="tag hyb">Hybrid</span></td></tr>
+          <tr><td>Node explain</td><td><code>etl_explain_node</code></td><td><span class="tag hyb">Hybrid</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="convert">
+      <h2>6. Informatica / ETL conversion agent — low-level call chain</h2>
+      <p class="lede">
+        Screen: <code>management/conversion</code>. Analyse is parser-only.
+        Convert is Claude (or heuristic). Check-in, notebook import, and Databricks job
+        run are automation in Go.
+      </p>
+      <div class="mermaid">
+flowchart TB
+  U[Upload SQL / Informatica XML / SSIS DTSX] --> CA[POST /conversion/analyze]
+  CA --> PA[etl_convert.analyze — detect_source + plan markdown]
+  PA --> UI1[Show plan / metrics / steps — no LLM]
+
+  U2[Choose target: Databricks SQL or PySpark + model] --> CR[POST /conversion/run]
+  CR --> ENG{engine}
+  ENG -->|ANTHROPIC_API_KEY| LLM[Claude CONVERT_SYSTEM_PROMPT]
+  ENG -->|no key / Claude error| H[etl_convert.heuristic_convert]
+  ENG -->|model=lakebridge| LB[Placeholder — not implemented]
+  LLM --> VAL[validate_code]
+  H --> VAL
+  VAL --> CODE[Converted code in UI]
+
+  CODE --> CK[POST /conversion/checkin]
+  CK --> GIT[Write conversions/ws{id}/ + git add/commit]
+  CODE --> DEP[POST /conversion/deploy]
+  DEP --> DBX1[Databricks workspace import notebook]
+  DEP --> JOB[POST /conversion/job — run job]
+  CODE --> AUD[POST /conversion/audit → conversion_audit table]
+      </div>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Handler → agent</th><th>Class</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /conversion/analyze</code></td><td>ConversionAnalyze → <code>/convert/analyze</code></td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>POST /conversion/run</code></td><td>ConversionRun → <code>/convert/run</code></td><td><span class="tag hyb">Hybrid</span></td></tr>
+          <tr><td><code>POST /conversion/checkin</code></td><td>ConversionCheckin (git write)</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>POST /conversion/deploy</code></td><td>ConversionDeploy (Databricks REST)</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>POST /conversion/job</code></td><td>ConversionJob</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>GET/POST /conversion/audit</code></td><td>List / Save conversion_audit</td><td><span class="tag auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="ops">
+      <h2>7. Rules engine, pipelines, dashboard — automation only</h2>
+      <p class="lede">These screens never call Claude. They persist and execute what the analyser proposed (or seeded SQL).</p>
+      <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Analyst
+  participant Rules as rules.component.ts
+  participant API as Go handlers
+  participant Ctrl as RevealDQ_ctrl
+  participant WH as RevealDQ
+  participant Dash as dashboard.component.ts
+
+  Analyst->>Rules: Save to Rules Engine (from analyser)
+  Rules->>API: POST /workspaces/{id}/rules
+  API->>Ctrl: INSERT dq_rules status=DRAFT
+  API->>Ctrl: INSERT dq_rule_audit (prompt, conversation, tool_traces, model, impact)
+
+  Analyst->>Rules: DRAFT → APPROVED → ACTIVE
+  Rules->>API: PATCH /rules/{id} {status}
+  API->>Ctrl: UPDATE dq_rules.status
+
+  Analyst->>API: POST /pipelines/{id}/run
+  API->>Ctrl: INSERT dq_job_runs RUNNING
+  API->>WH: CALL allowlisted proc<br/>sp_dq_cdr_unrated | sp_dq_invoice_balance | sp_dq_msisdn_validity
+  WH-->>API: findings + rows_checked + rows_failed
+  API->>Ctrl: UPDATE run PASSED/FAILED/ERROR + dq_job_results
+  Dash->>API: GET /dashboard
+  API->>Ctrl: aggregate runs / rules by dimension
+      </div>
+      <div class="grid-2">
+        <article class="card auto">
+          <h3>Sample warehouse jobs</h3>
+          <ul class="tight">
+            <li><code>sql/revealDQ/procs/sp_dq_cdr_unrated.sql</code> — completeness (CDR without rated_usage)</li>
+            <li><code>sp_dq_invoice_balance.sql</code> — consistency</li>
+            <li><code>sp_dq_msisdn_validity.sql</code> — validity</li>
+          </ul>
+          <p class="small"><code>executeProc</code> allowlists those three names only.</p>
+        </article>
+        <article class="card auto">
+          <h3>Other non-AI surfaces</h3>
+          <ul class="tight">
+            <li>Auth: <code>Register</code> / <code>Login</code> / JWT middleware</li>
+            <li>Workspaces + <code>user_workspace_roles</code></li>
+            <li>Config: MySQL / SQL Server placeholder / Databricks test</li>
+            <li>Settings: <code>screen_acl</code> view/edit matrix</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="matrix">
+      <h2>8. Inventory — every product surface</h2>
+
+      <h3>8.1 UI screens</h3>
+      <table>
+        <thead><tr><th>Route</th><th>Component</th><th>Class</th><th>Calls</th></tr></thead>
+        <tbody>
+          <tr><td><code>/login</code></td><td>login.component.ts</td><td><span class="tag auto">Auto</span></td><td>auth register / login</td></tr>
+          <tr><td><code>/workspaces</code></td><td>workspaces.component.ts</td><td><span class="tag auto">Auto</span></td><td>workspace CRUD</td></tr>
+          <tr><td><code>management/analyser</code></td><td>analyser.component.ts</td><td><span class="tag ai">AI</span></td><td><code>/analyser/chat</code></td></tr>
+          <tr><td><code>management/rules</code></td><td>rules.component.ts</td><td><span class="tag auto">Auto</span></td><td>rules + audit</td></tr>
+          <tr><td><code>management/etl</code></td><td>etl.component.ts</td><td><span class="tag hyb">Hybrid</span></td><td><code>/etl/analyze</code>, <code>/etl/explain-node</code></td></tr>
+          <tr><td><code>management/conversion</code></td><td>conversion.component.ts</td><td><span class="tag hyb">Hybrid</span></td><td>convert + git + Databricks</td></tr>
+          <tr><td><code>operations/pipelines</code></td><td>pipelines.component.ts</td><td><span class="tag auto">Auto</span></td><td>list / run / runs</td></tr>
+          <tr><td><code>operations/dashboard</code></td><td>dashboard.component.ts</td><td><span class="tag auto">Auto</span></td><td><code>/dashboard</code></td></tr>
+          <tr><td><code>config</code></td><td>config.component.ts</td><td><span class="tag auto">Auto</span></td><td>connections + test</td></tr>
+          <tr><td><code>settings</code></td><td>settings.component.ts</td><td><span class="tag auto">Auto</span></td><td>ACL</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.2 Agent process files (<code>agents/</code>)</h3>
+      <table>
+        <thead><tr><th>File</th><th>Class</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>main.py</code></td><td><span class="tag ai">AI hub</span></td><td>FastAPI: <code>/chat</code>, <code>/etl/*</code>, <code>/convert/*</code>, Claude client, intent, rule factory</td></tr>
+          <tr><td><code>mcp_client.py</code></td><td><span class="tag auto">Auto</span></td><td>Spawn MCP stdio, JSON-RPC</td></tr>
+          <tr><td><code>mcp_server.py</code></td><td><span class="tag auto">Auto</span></td><td>MySQL tools over MCP</td></tr>
+          <tr><td><code>etl_analysis.py</code></td><td><span class="tag auto">Auto</span></td><td>SQL / Informatica parsers + heuristic Q&amp;A</td></tr>
+          <tr><td><code>etl_graph.py</code></td><td><span class="tag auto">Auto</span></td><td>Nodes/edges for the flow canvas</td></tr>
+          <tr><td><code>etl_convert.py</code></td><td><span class="tag hyb">Hybrid</span></td><td>Detect / plan (auto); heuristic convert; validation</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.3 Control-plane tables</h3>
+      <table>
+        <thead><tr><th>Table</th><th>Filled by</th><th>Class</th></tr></thead>
+        <tbody>
+          <tr><td><code>users</code>, <code>roles</code>, <code>workspaces</code>, <code>screen_acl</code></td><td>Go auth / settings</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>data_connections</code></td><td>Config screen</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>dq_rules</code></td><td>Analyst save / edit / status</td><td><span class="tag hyb">Hybrid</span> (content from agent, write is auto)</td></tr>
+          <tr><td><code>dq_rule_audit</code></td><td>CreateRule — stores prompt, traces, model</td><td><span class="tag hyb">Hybrid</span></td></tr>
+          <tr><td><code>dq_pipelines</code>, <code>dq_job_runs</code>, <code>dq_job_results</code></td><td>RunPipeline</td><td><span class="tag auto">Auto</span></td></tr>
+          <tr><td><code>conversion_audit</code></td><td>Conversion screen</td><td><span class="tag hyb">Hybrid</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.4 Ports and scripts</h3>
+      <table>
+        <thead><tr><th>Process</th><th>Script</th><th>Port</th></tr></thead>
+        <tbody>
+          <tr><td>Angular UI</td><td><code>scripts/run-ui.sh</code></td><td>4200</td></tr>
+          <tr><td>Go API</td><td><code>scripts/run-api.sh</code></td><td>8080</td></tr>
+          <tr><td>Python agent</td><td><code>scripts/run-agent.sh</code></td><td>8090</td></tr>
+          <tr><td>MySQL warehouse + ctrl</td><td>local MySQL + <code>scripts/apply-sql.sh</code></td><td>3306</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>One-line summary for stakeholders.</strong>
+        Reveal DQ uses <em>agents</em> to understand data and legacy ETL and to draft rules or Databricks code.
+        Everything that authenticates, stores, tests, deploys, or runs a DQ job is <em>automation</em>.
+        Claude is optional: without <code>ANTHROPIC_API_KEY</code> the agents degrade to parsers and SQL heuristics.
+      </div>
+    </section>
+
+    <footer>
+      Reveal DQ · Automation vs AI &amp; Agents · sourced from
+      <code>frontend/</code>, <code>backend/main.go</code>, <code>backend/internal/handlers/</code>,
+      <code>agents/</code>, <code>sql/</code>. Open this file in a browser (diagrams need network for Mermaid CDN).
+    </footer>
+  </main>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+        primaryColor: "#ede9fe",
+        primaryTextColor: "#0f172a",
+        primaryBorderColor: "#7c3aed",
+        lineColor: "#64748b",
+        secondaryColor: "#ccfbf1",
+        tertiaryColor: "#e0e7ff"
+      },
+      flowchart: { htmlLabels: true, curve: "basis" },
+      sequence: { actorMargin: 24, boxMargin: 8 }
+    });
+  </script>
+</body>
+</html>

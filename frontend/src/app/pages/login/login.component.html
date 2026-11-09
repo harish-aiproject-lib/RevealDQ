@@ -5,8 +5,8 @@
   <header class="topbar">
     <app-logo />
     <nav>
-      <a href="#capabilities">Features</a>
-      <a href="#dimensions">Dimensions</a>
+      <a href="#modules">Products</a>
+      <a href="#capabilities">How it works</a>
       <a href="#about">About</a>
     </nav>
     <div class="top-actions">
@@ -15,7 +15,7 @@
       </button>
       @if (loggedIn()) {
         <button type="button" class="accent" (click)="openApp()">
-          Open workspaces <app-icon name="arrow-right" [size]="15" />
+          Open projects <app-icon name="arrow-right" [size]="15" />
         </button>
       } @else {
         <a class="cta" href="#signin">Get started</a>
@@ -25,21 +25,22 @@
 
   <section class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">Agentic enterprise data quality</p>
+      <p class="eyebrow">Agentic enterprise platform · {{ products.length }} product modules</p>
       <h1>
-        Reveal the <span class="grad">true health</span> of your enterprise data —
-        <span class="accent-word">before you migrate</span>
+        Reveal the <span class="grad">reality</span> behind your enterprise —
+        <span class="accent-word">one product at a time</span>
       </h1>
       <p class="definition" id="about">
-        Reveal DQ pairs AI agents with your warehouse to continuously interrogate, profile, and
-        score data quality. It converses with your MySQL estate through MCP tools, uncovers
-        defects, and turns findings into governed, executable DQ rules.
+        Reality Reveal is a multi-product platform. Sign in once, then create a project for the
+        product you need: <strong>Reveal DQ</strong> interrogates the true health of your data before
+        you migrate; <strong>Reveal VoC</strong> surfaces what customers are really telling you. Every
+        product pairs AI agents with governed, evidence-backed outputs.
       </p>
 
-      <div class="stat-row" id="dimensions">
-        <div class="stat"><strong>6</strong><span>DQ dimensions</span></div>
-        <div class="stat"><strong>MCP</strong><span>native connectivity</span></div>
-        <div class="stat"><strong>SQL</strong><span>evidence-backed rules</span></div>
+      <div class="stat-row">
+        <div class="stat"><strong>{{ products.length }}</strong><span>product modules</span></div>
+        <div class="stat"><strong>1</strong><span>sign-in · shared projects</span></div>
+        <div class="stat"><strong>MCP</strong><span>agentic connectivity</span></div>
       </div>
     </div>
 
@@ -52,7 +53,7 @@
             Signed in as <strong>{{ auth.user()?.displayName || auth.user()?.email }}</strong>
           </p>
           <button type="button" (click)="openApp()">
-            Continue to workspaces <app-icon name="arrow-right" [size]="15" />
+            Continue to projects <app-icon name="arrow-right" [size]="15" />
           </button>
           <button type="button" class="secondary" (click)="signOut()">
             <app-icon name="logout" [size]="15" /> Sign out
@@ -60,7 +61,7 @@
         </div>
       } @else {
         <h2>{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
-        <p class="muted sub">Access your project workspaces</p>
+        <p class="muted sub">One account for every Reveal product</p>
 
         <label>
           Email
@@ -88,7 +89,7 @@
         }
 
         <button type="submit" [disabled]="loading">
-          {{ loading ? 'Please wait…' : mode === 'login' ? 'Enter Reveal DQ' : 'Register' }}
+          {{ loading ? 'Please wait…' : mode === 'login' ? 'Enter Reality Reveal' : 'Register' }}
         </button>
         <button type="button" class="ghost" (click)="toggleMode()">
           {{ mode === 'login' ? 'Need an account? Register' : 'Back to sign in' }}
@@ -97,34 +98,67 @@
     </form>
   </section>
 
+  <section class="modules" id="modules">
+    <div class="section-head">
+      <p class="eyebrow">Product modules</p>
+      <h2>Pick the reality you need to reveal</h2>
+      <p class="muted">
+        Each project you create belongs to one product. The workspace, agents and navigation adapt
+        to that product.
+      </p>
+    </div>
+    <div class="module-grid">
+      @for (p of products; track p.code) {
+        <article class="module panel" [class.accent-violet]="p.accent === 'violet'">
+          <div class="module-top">
+            <span class="module-icon" [class.product-violet]="p.accent === 'violet'" [class.product-cyan]="p.accent === 'cyan'">
+              <app-icon [name]="p.icon" [size]="22" />
+            </span>
+            <span class="tag" [class.preview]="statusOf(p.code) === 'PREVIEW'" [class.neutral]="statusOf(p.code) === 'COMING_SOON'">
+              {{ statusLabel(p.code) }}
+            </span>
+          </div>
+          <h3>Reveal <span class="grad-name">{{ p.short }}</span></h3>
+          <p class="tagline">{{ p.tagline }}</p>
+          <p class="desc">{{ p.description }}</p>
+          <ul class="mini-list">
+            @for (h of p.highlights; track h.title) {
+              <li><app-icon name="check" [size]="14" /> {{ h.title }}</li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+  </section>
+
   <section class="cards" id="capabilities">
     <div class="card panel">
-      <span class="card-icon cyan"><app-icon name="agent" [size]="21" /></span>
-      <h3>Conversational analysis</h3>
+      <span class="card-icon cyan"><app-icon name="modules" [size]="21" /></span>
+      <h3>One platform, many reveals</h3>
       <p>
-        Ask the DQ Analyser Agent about your data in plain language. It queries schema and rows
-        through MCP and answers with evidence.
+        Projects are customer-scoped and product-scoped. Create a Reveal DQ project for a migration,
+        a Reveal VoC project for a customer programme — same sign-in, same governance.
       </p>
     </div>
     <div class="card panel">
-      <span class="card-icon indigo"><app-icon name="shield" [size]="21" /></span>
-      <h3>Governed rule lifecycle</h3>
+      <span class="card-icon indigo"><app-icon name="agent" [size]="21" /></span>
+      <h3>Agents that show their evidence</h3>
       <p>
-        Every recommendation ships with business and technical definitions, impacted columns, and a
-        SQL check — draft, approve, activate.
+        Every product ships AI agents that reason over your sources through MCP tools and return
+        traceable findings — never opaque answers.
       </p>
     </div>
     <div class="card panel">
-      <span class="card-icon orange"><app-icon name="chart" [size]="21" /></span>
-      <h3>Executable pipelines</h3>
+      <span class="card-icon orange"><app-icon name="shield" [size]="21" /></span>
+      <h3>Governed by design</h3>
       <p>
-        Stored-procedure jobs validate the warehouse on demand and stream pass / fail statistics to
-        the operations dashboard.
+        Role × screen access control, audit trails and draft → approved → active lifecycles apply
+        to every module out of the box.
       </p>
     </div>
   </section>
 
   <footer class="foot">
-    <span class="muted">Reveal DQ — the true health of enterprise data. Reveal the Reality Before you migrate.</span>
+    <span class="muted">Reality Reveal — reveal the reality behind your enterprise. Products: Reveal DQ · Reveal VoC.</span>
   </footer>
 </div>

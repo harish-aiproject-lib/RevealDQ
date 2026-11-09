@@ -1,0 +1,154 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="inbox" [size]="20" /></span>
+    <div>
+      <h2>Signals</h2>
+      <p>
+        Raw LinkedIn posts and comments stored in VOC_DB, each classified by the VoC agent — happy, negative,
+        neutral or broadcast — with category, themes and a suggested response.
+      </p>
+    </div>
+    <div class="head-actions">
+      <button (click)="reanalyse()" [disabled]="loading() || !total()" title="Drop and recompute the agent analysis">
+        <app-icon name="spark" [size]="15" /> Re-analyse{{ filter.companyId ? ' company' : ' all' }}
+      </button>
+    </div>
+  </header>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="panel filters">
+    <label>
+      Company
+      <select [(ngModel)]="filter.companyId" name="companyId" (ngModelChange)="apply()">
+        <option [ngValue]="0">All companies</option>
+        @for (c of companies(); track c.companyId) {
+          <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Sentiment
+      <select [(ngModel)]="filter.sentiment" name="sentiment" (ngModelChange)="apply()">
+        <option value="">All</option>
+        @for (s of sentiments; track s.code) {
+          <option [value]="s.code">{{ s.label }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Category
+      <select [(ngModel)]="filter.category" name="category" (ngModelChange)="apply()">
+        <option value="">All</option>
+        @for (c of categories; track c) {
+          <option [value]="c">{{ titleCase(c) }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Type
+      <select [(ngModel)]="filter.kind" name="kind" (ngModelChange)="apply()">
+        <option value="">Posts &amp; comments</option>
+        <option value="POST">Posts</option>
+        <option value="COMMENT">Comments</option>
+        <option value="REPOST">Reposts</option>
+      </select>
+    </label>
+    <label class="search">
+      Search
+      <span class="search-box">
+        <app-icon name="search" [size]="14" />
+        <input [(ngModel)]="filter.q" name="q" placeholder="text or author…" (keyup.enter)="apply()" />
+      </span>
+    </label>
+    <button class="small" (click)="clear()">Clear</button>
+  </div>
+
+  <div class="toolbar">
+    <span class="muted">{{ total() }} signal{{ total() === 1 ? '' : 's' }}</span>
+    <span class="pager">
+      <button class="small" (click)="go(-1)" [disabled]="page === 0">‹</button>
+      <span class="muted">page {{ page + 1 }} / {{ pages() }}</span>
+      <button class="small" (click)="go(1)" [disabled]="page >= pages() - 1">›</button>
+    </span>
+  </div>
+
+  @if (!items().length && !loading()) {
+    <div class="panel empty">
+      <span class="e-icon"><app-icon name="inbox" [size]="22" /></span>
+      <p>
+        No signals match. Add a company and run a sync from the Companies page — extraction stores every post
+        and comment here, then the agent classifies them.
+      </p>
+    </div>
+  }
+
+  <div class="feed">
+    @for (p of items(); track p.postId) {
+      <article class="signal" [class.comment]="p.kind === 'COMMENT'">
+        <div class="s-top">
+          <span class="author">{{ p.authorName || p.authorHandle || 'Unknown' }}</span>
+          @if (p.authorHeadline) {
+            <span class="headline">· {{ p.authorHeadline }}</span>
+          }
+          @if (p.authorType === 'ORGANIZATION') {
+            <span class="tag product-violet">official page</span>
+          }
+          <span class="tag cat">{{ p.kind.toLowerCase() }}</span>
+          <span>· {{ p.companyName }}</span>
+          <span>· {{ relTime(p.publishedAt) }}</span>
+          <span class="engage">
+            <span title="likes">♥ {{ p.likeCount }}</span>
+            <span title="comments">💬 {{ p.commentCount }}</span>
+            @if (p.shareCount) {
+              <span title="shares">↗ {{ p.shareCount }}</span>
+            }
+          </span>
+        </div>
+
+        <p class="content">{{ p.content }}</p>
+
+        <div class="s-meta">
+          <span [class]="'tag ' + meta(p.sentiment).css">
+            <app-icon [name]="meta(p.sentiment).icon" [size]="12" /> {{ meta(p.sentiment).label }}
+            @if (scoreLabel(p)) {
+              <span class="score">{{ scoreLabel(p) }}</span>
+            }
+          </span>
+          @if (p.category) {
+            <span class="tag cat">{{ titleCase(p.category) }}</span>
+          }
+          @if (p.urgency && p.urgency !== 'LOW') {
+            <span [class]="'tag ' + p.urgency.toLowerCase()">{{ p.urgency }} urgency</span>
+          }
+          @for (t of p.themes; track t) {
+            <span class="theme">#{{ t }}</span>
+          }
+          @if (p.url) {
+            <a [href]="p.url" target="_blank" rel="noopener">open on LinkedIn ↗</a>
+          }
+          <button class="small ghost" (click)="toggle(p.postId)">
+            {{ expanded().has(p.postId) ? 'Hide analysis' : 'Analysis' }}
+          </button>
+        </div>
+
+        @if (expanded().has(p.postId)) {
+          @if (p.analysed) {
+            <p class="summary">{{ p.summary }}</p>
+            @if (p.suggestedAction) {
+              <p class="suggest"><strong>Suggested:</strong> {{ p.suggestedAction }}</p>
+            }
+            <p class="suggest">engine: {{ p.engine || 'n/a' }} · external id <code>{{ p.externalId }}</code></p>
+          } @else {
+            <p class="suggest">Not analysed yet — run a sync or re-analyse.</p>
+          }
+        }
+      </article>
+    }
+  </div>
+</section>

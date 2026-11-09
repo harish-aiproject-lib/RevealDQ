@@ -1,0 +1,161 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="building" [size]="20" /></span>
+    <div>
+      <h2>Companies</h2>
+      <p>
+        Register the companies whose customer voice you want to capture from LinkedIn. Public posts naming the
+        company or using its hashtags — and the comments under them — are scraped for the date window you choose.
+      </p>
+    </div>
+    <div class="head-actions">
+      <button class="primary" (click)="sync()" [disabled]="syncing() !== null || !companies().length || !!rangeError()">
+        <app-icon name="refresh" [size]="15" />
+        {{ syncing() === 'all' ? 'Scraping…' : 'Scrape all now' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="panel range">
+    <div class="range-head">
+      <h3><app-icon name="clock" [size]="15" /> Scrape window</h3>
+      <span class="muted">{{ extractionLabel() }}</span>
+    </div>
+    <div class="range-row">
+      <div class="presets">
+        @for (p of presets; track p.days) {
+          <button type="button" class="chip" [class.on]="isPreset(p.days)" (click)="preset(p.days)">{{ p.label }}</button>
+        }
+      </div>
+      <label class="date">
+        From
+        <input type="date" [(ngModel)]="range.from" name="from" [max]="range.to || today" />
+      </label>
+      <label class="date">
+        To
+        <input type="date" [(ngModel)]="range.to" name="to" [min]="range.from" [max]="today" />
+      </label>
+      <span class="days" [class.bad]="rangeError()">
+        @if (rangeError()) {
+          {{ rangeError() }}
+        } @else {
+          {{ rangeDays() }} day{{ rangeDays() === 1 ? '' : 's' }} · posts and comments published in this window
+        }
+      </span>
+    </div>
+    <p class="hint">
+      Without a LinkedIn session only public pages are reachable: the company's latest feed posts, third-party posts found in
+      the web index, and the first page of comments on each. Long windows return what LinkedIn still exposes, not a full archive.
+    </p>
+  </div>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (notes.length) {
+    <ul class="notes">
+      @for (n of notes; track $index) {
+        <li>{{ n }}</li>
+      }
+    </ul>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="grid">
+    <div class="panel form">
+      <h3><app-icon name="plus" [size]="15" /> Add a company</h3>
+      <form (ngSubmit)="create()">
+        <label>
+          Company name
+          <input [(ngModel)]="form.companyName" name="companyName" placeholder="Acme Telecom" required />
+          <span class="hint">Used to find third-party posts that mention the company.</span>
+        </label>
+        <label>
+          Official LinkedIn handle or page URL
+          <input
+            [(ngModel)]="form.linkedinHandle"
+            name="handle"
+            placeholder="acme-telecom  or  https://www.linkedin.com/company/acme-telecom/"
+            required
+          />
+          @if (handlePreview()) {
+            <span class="hint">Will scrape <strong>linkedin.com/company/{{ handlePreview() }}</strong></span>
+          }
+        </label>
+        <label>
+          Hashtags customers use (comma or space separated)
+          <input [(ngModel)]="form.hashtags" name="hashtags" placeholder="#AcmeTelecom #Acme" />
+          <span class="hint">Each hashtag is searched separately. Defaults to the company name without spaces.</span>
+        </label>
+        <label class="check">
+          <span class="check-row">
+            <input type="checkbox" [(ngModel)]="form.syncNow" name="syncNow" />
+            Scrape the selected window and analyse immediately
+          </span>
+        </label>
+        <button type="submit" class="primary" [disabled]="loading() || syncing() !== null">
+          <app-icon name="plus" [size]="15" /> Add company
+        </button>
+      </form>
+    </div>
+
+    <div class="panel list">
+      <h3>Tracked companies <span class="tag product-violet">{{ companies().length }}</span></h3>
+      @if (!companies().length) {
+        <div class="empty">
+          <span class="e-icon"><app-icon name="building" [size]="22" /></span>
+          <p>No companies yet. Add the first one on the left — the LinkedIn handle is all we need to start listening.</p>
+        </div>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Listening to</th>
+              <th>Signals</th>
+              <th>Last scrape</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of companies(); track c.companyId) {
+              <tr [class.inactive]="!c.isActive">
+                <td>
+                  <div class="c-name">{{ c.companyName }}</div>
+                  @if (!c.isActive) {
+                    <span class="tag neutral">paused</span>
+                  }
+                </td>
+                <td>
+                  <div class="handle">&#64;{{ c.linkedinHandle }}</div>
+                  <div class="tags">
+                    @for (h of c.hashtags; track h) {
+                      <span class="tag cat">#{{ h }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <a class="count" [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ companyId: c.companyId }">{{ c.postCount }}</a>
+                </td>
+                <td class="muted">{{ relTime(c.lastSyncAt) }}</td>
+                <td class="actions">
+                  <button class="small" (click)="sync(c.companyId)" [disabled]="syncing() !== null || !!rangeError()" title="Scrape the selected window and analyse">
+                    <app-icon name="refresh" [size]="13" /> {{ syncing() === c.companyId ? 'Scraping…' : 'Scrape' }}
+                  </button>
+                  <button class="small" (click)="toggle(c)" [title]="c.isActive ? 'Pause scheduled refresh' : 'Resume scheduled refresh'">
+                    {{ c.isActive ? 'Pause' : 'Resume' }}
+                  </button>
+                  <button class="small danger" (click)="remove(c)" title="Remove company and its signals">
+                    <app-icon name="trash" [size]="13" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</section>

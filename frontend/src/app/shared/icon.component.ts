@@ -109,6 +109,81 @@ import { Component, Input } from '@angular/core';
           <rect x="3" y="4" width="18" height="16" rx="2" />
           <path d="M3 10h18M9 10v10M15 10v10" />
         }
+        @case ('mic') {
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M5 11a7 7 0 0 0 14 0" />
+          <path d="M12 18v3M9 21h6" />
+        }
+        @case ('modules') {
+          <path d="M12 3l8 4.5-8 4.5-8-4.5L12 3z" />
+          <path d="M4 12l8 4.5 8-4.5" />
+          <path d="M4 16.5L12 21l8-4.5" />
+        }
+        @case ('users') {
+          <circle cx="9" cy="8" r="3.2" />
+          <path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5" />
+          <circle cx="17" cy="9" r="2.4" />
+          <path d="M16.5 13.6c2.6.3 4.5 2.2 4.5 4.9" />
+        }
+        @case ('wave') {
+          <path d="M3 12h2l2-5 3 10 3-14 3 12 2-3h3" />
+        }
+        @case ('building') {
+          <rect x="4" y="3" width="16" height="18" rx="2" />
+          <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3" />
+        }
+        @case ('refresh') {
+          <path d="M20 12a8 8 0 1 1-2.3-5.7" />
+          <path d="M20 4v5h-5" />
+        }
+        @case ('inbox') {
+          <path d="M4 4h16v16H4z" />
+          <path d="M4 14h4l2 3h4l2-3h4" />
+        }
+        @case ('flag') {
+          <path d="M5 21V4" />
+          <path d="M5 4h12l-2 4 2 4H5" />
+        }
+        @case ('link') {
+          <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2" />
+          <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2" />
+        }
+        @case ('globe') {
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+        }
+        @case ('trash') {
+          <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+          <path d="M10 11v6M14 11v6" />
+        }
+        @case ('search') {
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="M20 20l-4-4" />
+        }
+        @case ('clock') {
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7v5l3.5 2" />
+        }
+        @case ('smile') {
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2" />
+          <circle cx="9.5" cy="10" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="14.5" cy="10" r="0.9" fill="currentColor" stroke="none" />
+        }
+        @case ('frown') {
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M8.5 16.5c1-1.3 2.2-2 3.5-2s2.5.7 3.5 2" />
+          <circle cx="9.5" cy="10" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="14.5" cy="10" r="0.9" fill="currentColor" stroke="none" />
+        }
+        @case ('megaphone') {
+          <path d="M4 10v4a1 1 0 0 0 1 1h2l4 3.5V5.5L7 9H5a1 1 0 0 0-1 1z" />
+          <path d="M15 9.5a3 3 0 0 1 0 5M17.5 7a6.5 6.5 0 0 1 0 10" />
+        }
+        @case ('upload') {
+          <path d="M12 16V5M7.5 9.5 12 5l4.5 4.5" />
+          <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+        }
       }
     </svg>
   `,

@@ -1,0 +1,71 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.form,
+.list {
+  padding: 1.15rem 1.25rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.check-row input {
+  width: auto;
+}
+
+.c-name {
+  font-weight: 700;
+}
+.handle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--violet-ink);
+}
+.tags {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+.count {
+  font-weight: 700;
+  color: var(--ink);
+}
+td.actions {
+  white-space: nowrap;
+  text-align: right;
+}
+td.actions button + button {
+  margin-left: 0.3rem;
+}
+tr.inactive td {
+  opacity: 0.6;
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

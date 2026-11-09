@@ -1,0 +1,293 @@
+<section class="voc">
+  <!-- ------------------------------------------------ hero -->
+  <header class="panel hero">
+    <div class="hero-copy">
+      <div class="badges">
+        <span class="tag product-violet">{{ product.name }}</span>
+        <span class="tag neutral">LinkedIn listening</span>
+        @if (workspace(); as ws) {
+          <span class="tag neutral">{{ ws.customerName }}</span>
+        }
+      </div>
+      <h2>
+        What customers are <span class="grad">really saying</span>
+        @if (workspace(); as ws) {
+          — {{ ws.workspaceName }}
+        }
+      </h2>
+      <p class="muted">
+        A headless browser scrapes LinkedIn's public pages — no credentials — for posts and comments that name or
+        hashtag your companies inside a date window (default: the last 5 days) and stores them in VOC_DB; the VoC
+        agent classifies each one as happy, negative, neutral or broadcast, finds the themes and turns the urgent
+        voices into actions.
+      </p>
+      <div class="actions">
+        @if (!hasCompanies()) {
+          <a class="btn violet" [routerLink]="['/workspaces', wsId, 'voc', 'companies']">
+            <app-icon name="building" [size]="16" /> Add your first company
+          </a>
+        } @else {
+          <button class="btn violet" (click)="sync()" [disabled]="syncing()" title="Incremental scrape since the last run">
+            <app-icon name="refresh" [size]="16" /> {{ syncing() ? 'Scraping…' : 'Refresh now' }}
+          </button>
+          <a class="btn secondary" [routerLink]="['/workspaces', wsId, 'voc', 'companies']" title="Pick a date range and scrape">
+            <app-icon name="clock" [size]="16" /> Scrape a date range
+          </a>
+        }
+        <a class="btn secondary" [routerLink]="['/workspaces', wsId, 'voc', 'analyser']">
+          <app-icon name="agent" [size]="16" /> Ask the VoC agent
+        </a>
+      </div>
+      @if (message) {
+        <p class="ok">{{ message }}</p>
+      }
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <span class="ring r1"></span>
+      <span class="ring r2"></span>
+      <span class="ring r3"></span>
+      <span class="core"><app-icon name="mic" [size]="28" /></span>
+    </div>
+  </header>
+
+  @if (stats(); as s) {
+    <!-- ------------------------------------------------ KPIs -->
+    <div class="kpis">
+      <a class="panel kpi" [routerLink]="['/workspaces', wsId, 'voc', 'signals']">
+        <span class="k-icon"><app-icon name="inbox" [size]="18" /></span>
+        <strong>{{ s.totalPosts }}</strong>
+        <span>signals stored</span>
+        <small class="muted">{{ s.byKind?.['POST'] || 0 }} posts · {{ s.byKind?.['COMMENT'] || 0 }} comments</small>
+      </a>
+      <a class="panel kpi" [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ sentiment: 'POSITIVE' }">
+        <span class="k-icon pos"><app-icon name="smile" [size]="18" /></span>
+        <strong>{{ happiness() === null ? '—' : happiness() + '%' }}</strong>
+        <span>happy customer voice</span>
+        <small class="muted">{{ s.bySentiment?.['POSITIVE'] || 0 }} positive of {{ analysed() }} analysed</small>
+      </a>
+      <a class="panel kpi" [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ sentiment: 'NEGATIVE' }">
+        <span class="k-icon neg"><app-icon name="frown" [size]="18" /></span>
+        <strong>{{ s.bySentiment?.['NEGATIVE'] || 0 }}</strong>
+        <span>negative signals</span>
+        <small class="muted">{{ s.highUrgency }} high urgency</small>
+      </a>
+      <a class="panel kpi" [routerLink]="['/workspaces', wsId, 'voc', 'actions']">
+        <span class="k-icon"><app-icon name="flag" [size]="18" /></span>
+        <strong>{{ s.openActions }}</strong>
+        <span>open actions</span>
+        <small class="muted">{{ s.companies }} compan{{ s.companies === 1 ? 'y' : 'ies' }} tracked</small>
+      </a>
+    </div>
+
+    <div class="cols">
+      <!-- ------------------------------------------------ sentiment split -->
+      <div class="panel card">
+        <h3><app-icon name="wave" [size]="15" /> Sentiment split</h3>
+        @if (!analysed()) {
+          <p class="muted small">Nothing analysed yet.</p>
+        } @else {
+          <div class="split-bar">
+            @for (m of split(); track m.code) {
+              @if (m.count) {
+                <span [class]="'seg ' + m.css" [style.width.%]="m.pct" [title]="m.label + ' ' + m.count"></span>
+              }
+            }
+          </div>
+          <ul class="legend">
+            @for (m of split(); track m.code) {
+              <li>
+                <a [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ sentiment: m.code }">
+                  <span [class]="'dot ' + m.css"></span>
+                  <app-icon [name]="m.icon" [size]="13" /> {{ m.label }}
+                  <strong>{{ m.count }}</strong> <span class="muted">{{ m.pct }}%</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- ------------------------------------------------ timeline -->
+      <div class="panel card">
+        <h3><app-icon name="chart" [size]="15" /> Last 21 days</h3>
+        @if (!timeline().length) {
+          <p class="muted small">No dated signals yet.</p>
+        } @else {
+          <div class="bars">
+            @for (d of timeline(); track d.date) {
+              <div class="bar" [title]="d.date + ': ' + d.total + ' signals (' + d.positive + ' positive, ' + d.negative + ' negative)'">
+                <span class="stack">
+                  <span class="b oth" [style.height.%]="d.othH"></span>
+                  <span class="b neg" [style.height.%]="d.negH"></span>
+                  <span class="b pos" [style.height.%]="d.posH"></span>
+                </span>
+                <small>{{ d.label }}</small>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ------------------------------------------------ categories / themes -->
+      <div class="panel card">
+        <h3><app-icon name="grid" [size]="15" /> What they talk about</h3>
+        @if (!categories().length) {
+          <p class="muted small">Categories appear after the first analysis.</p>
+        } @else {
+          <ul class="cats">
+            @for (c of categories(); track c.code) {
+              <li>
+                <a [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ category: c.code }">{{ titleCase(c.code) }}</a>
+                <span class="meter"><span [style.width.%]="c.pct"></span></span>
+                <strong>{{ c.count }}</strong>
+              </li>
+            }
+          </ul>
+        }
+        @if (s.topThemes?.length) {
+          <div class="themes">
+            @for (t of s.topThemes; track t.theme) {
+              <span class="tag cat">#{{ t.theme }} <em>{{ t.count }}</em></span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="cols two">
+      <!-- ------------------------------------------------ companies -->
+      <div class="panel card">
+        <h3>
+          <app-icon name="building" [size]="15" /> Companies
+          <a class="more" [routerLink]="['/workspaces', wsId, 'voc', 'companies']">manage →</a>
+        </h3>
+        @if (!s.byCompany?.length) {
+          <p class="muted small">No companies yet.</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Signals</th>
+                <th>Happy</th>
+                <th>Negative</th>
+                <th>Happiness</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of s.byCompany; track c.companyId) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/workspaces', wsId, 'voc', 'signals']" [queryParams]="{ companyId: c.companyId }">{{ c.companyName }}</a>
+                  </td>
+                  <td>{{ c.posts }}</td>
+                  <td class="pos-t">{{ c.positive }}</td>
+                  <td class="neg-t">{{ c.negative }}</td>
+                  <td>
+                    <span class="meter"><span class="pos" [style.width.%]="companyRatio(c)"></span></span>
+                    <small class="muted">{{ companyRatio(c) }}%</small>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- ------------------------------------------------ open actions -->
+      <div class="panel card">
+        <h3>
+          <app-icon name="flag" [size]="15" /> Open actions
+          <a class="more" [routerLink]="['/workspaces', wsId, 'voc', 'actions']">all →</a>
+        </h3>
+        @if (!data()?.openActions?.length) {
+          <p class="muted small">The agent creates actions from negative and urgent signals after each sync.</p>
+        } @else {
+          <ul class="alist">
+            @for (a of data()?.openActions; track a.actionId) {
+              <li>
+                <span [class]="'tag ' + a.priority.toLowerCase()">{{ a.priority }}</span>
+                <div>
+                  <strong>{{ a.title }}</strong>
+                  <small class="muted">{{ a.companyName }} · {{ a.signalCount }} signal{{ a.signalCount === 1 ? '' : 's' }} · {{ titleCase(a.category) }}</small>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------ recent + automation -->
+    <div class="cols two">
+      <div class="panel card">
+        <h3>
+          <app-icon name="inbox" [size]="15" /> Latest signals
+          <a class="more" [routerLink]="['/workspaces', wsId, 'voc', 'signals']">feed →</a>
+        </h3>
+        @if (!data()?.recent?.length) {
+          <p class="muted small">Sync a company to see LinkedIn signals here.</p>
+        } @else {
+          <ul class="recent">
+            @for (p of data()?.recent; track p.postId) {
+              <li>
+                <span [class]="'dot ' + meta(p.sentiment).css" [title]="meta(p.sentiment).label"></span>
+                <div>
+                  <div class="r-top">
+                    <strong>{{ p.authorName || 'Unknown' }}</strong>
+                    <span class="muted">· {{ p.companyName }} · {{ p.kind.toLowerCase() }} · {{ relTime(p.publishedAt) }}</span>
+                  </div>
+                  <p>{{ p.content }}</p>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="panel card automation">
+        <h3>
+          <app-icon name="refresh" [size]="15" /> Automation
+          <a class="more" [routerLink]="['/workspaces', wsId, 'voc', 'sources']">configure →</a>
+        </h3>
+        <dl>
+          <dt>Sources</dt>
+          <dd>
+            @if (!data()?.sources?.length) {
+              <span class="tag fail">none connected</span>
+            } @else {
+              @for (src of data()?.sources; track src.sourceId) {
+                <span class="tag" [class.ok]="src.status === 'CONNECTED'" [class.draft]="src.status !== 'CONNECTED'">{{ src.label }}</span>
+              }
+            }
+          </dd>
+          <dt>Last run</dt>
+          <dd>
+            @if (s.lastRun; as r) {
+              <span class="tag" [class.ok]="r.status === 'SUCCESS'" [class.fail]="r.status === 'FAILED'" [class.orange]="r.status === 'PARTIAL'">{{ r.status.toLowerCase() }}</span>
+              <span class="muted">{{ relTime(r.startedAt) }} · {{ r.itemsFetched }} fetched, {{ r.itemsNew }} new, {{ r.actionsCreated }} actions</span>
+            } @else {
+              <span class="muted">never</span>
+            }
+          </dd>
+          <dt>Schedule</dt>
+          <dd>
+            @if (s.schedule?.enabled) {
+              <span class="tag ok">every {{ s.schedule.cadenceMinutes >= 1440 ? (s.schedule.cadenceMinutes / 1440) + 'd' : (s.schedule.cadenceMinutes / 60) + 'h' }}</span>
+              <span class="muted">next {{ relTime(s.schedule.nextRunAt).replace('ago', 'from now') }}</span>
+            } @else {
+              <span class="tag neutral">manual only</span>
+            }
+          </dd>
+          <dt>Analysis</dt>
+          <dd><span class="muted">{{ analysed() }} / {{ s.totalPosts }} signals classified by the VoC agent</span></dd>
+        </dl>
+      </div>
+    </div>
+  } @else if (loading()) {
+    <p class="muted">Loading…</p>
+  }
+</section>

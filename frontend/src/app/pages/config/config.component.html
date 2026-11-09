@@ -3,7 +3,7 @@
     <span class="head-icon"><app-icon name="database" [size]="20" /></span>
     <div>
       <h2>Data sources</h2>
-      <p>Connect to MySQL for DQ analysis (RevealDQ warehouse).</p>
+      <p>Connect RevealDQ to your databases. Choose a driver, configure it, then test and manage the connection.</p>
     </div>
   </header>
 
@@ -14,44 +14,143 @@
     <p class="error">{{ error }}</p>
   }
 
-  <form class="panel form" (ngSubmit)="save()">
-    <h3>Add MySQL connection</h3>
-    <label>Name <input [(ngModel)]="form.connectionName" name="connectionName" /></label>
-    <div class="row">
-      <label>Host <input [(ngModel)]="form.host" name="host" /></label>
-      <label>Port <input type="number" [(ngModel)]="form.port" name="port" /></label>
+  <div class="panel form">
+    <div class="driver-row">
+      <label class="driver-select">
+        Connection driver
+        <select [ngModel]="selectedDriver()" (ngModelChange)="selectDriver($event)" name="driver">
+          @for (d of drivers; track d.id) {
+            <option [value]="d.id">{{ d.label }}</option>
+          }
+        </select>
+      </label>
+      <span class="driver-note">
+        <app-icon [name]="driverIcon(selectedDriver())" [size]="15" />
+        {{ driverNote() }}
+      </span>
     </div>
-    <label>Database <input [(ngModel)]="form.databaseName" name="databaseName" /></label>
-    <label>Username <input [(ngModel)]="form.username" name="username" /></label>
-    <label>Password <input type="password" [(ngModel)]="form.password" name="password" /></label>
-    <button type="submit">Save connection</button>
-  </form>
+
+    <!-- MySQL -->
+    @if (selectedDriver() === 'MYSQL') {
+      <form class="fields" (ngSubmit)="save()">
+        <label>Name <input [(ngModel)]="mysql.connectionName" name="mName" /></label>
+        <div class="row">
+          <label>Host <input [(ngModel)]="mysql.host" name="mHost" /></label>
+          <label>Port <input type="number" [(ngModel)]="mysql.port" name="mPort" /></label>
+        </div>
+        <label>Database <input [(ngModel)]="mysql.databaseName" name="mDb" /></label>
+        <div class="row">
+          <label>Username <input [(ngModel)]="mysql.username" name="mUser" /></label>
+          <label>Password <input type="password" [(ngModel)]="mysql.password" name="mPass" /></label>
+        </div>
+        <button type="submit" class="primary">Save MySQL connection</button>
+      </form>
+    }
+
+    <!-- SQL Server (placeholder) -->
+    @if (selectedDriver() === 'SQLSERVER') {
+      <form class="fields" (ngSubmit)="save()">
+        <div class="placeholder-banner">
+          <app-icon name="lock" [size]="15" /> SQL Server is a placeholder driver — connectivity isn't wired yet, but you can save the endpoint for later.
+        </div>
+        <label>Name <input [(ngModel)]="sqlserver.connectionName" name="sName" /></label>
+        <div class="row">
+          <label>Host <input [(ngModel)]="sqlserver.host" name="sHost" placeholder="sqlserver.example.com" /></label>
+          <label>Port <input type="number" [(ngModel)]="sqlserver.port" name="sPort" /></label>
+        </div>
+        <label>Database <input [(ngModel)]="sqlserver.databaseName" name="sDb" /></label>
+        <div class="row">
+          <label>Username <input [(ngModel)]="sqlserver.username" name="sUser" /></label>
+          <label>Password <input type="password" [(ngModel)]="sqlserver.password" name="sPass" /></label>
+        </div>
+        <button type="submit" class="primary">Save SQL Server connection</button>
+      </form>
+    }
+
+    <!-- Databricks -->
+    @if (selectedDriver() === 'DATABRICKS') {
+      <form class="fields" (ngSubmit)="save()">
+        <label>Name <input [(ngModel)]="databricks.connectionName" name="dName" /></label>
+        <label>Workspace host <input [(ngModel)]="databricks.host" name="dHost" /></label>
+        <div class="row">
+          <label>HTTP path <input [(ngModel)]="databricks.httpPath" name="dPath" /></label>
+          <label>Warehouse ID <input [(ngModel)]="databricks.warehouseId" name="dWh" /></label>
+        </div>
+        <div class="row">
+          <label>Workspace ID <input [(ngModel)]="databricks.workspaceId" name="dWs" /></label>
+          <label>Catalog <input [(ngModel)]="databricks.catalog" name="dCat" /></label>
+        </div>
+
+        <label class="auth-select">
+          Authentication
+          <select [(ngModel)]="databricks.authType" name="dAuth">
+            <option value="token">Personal Access Token (PAT)</option>
+            <option value="oauth">OAuth — service principal (M2M)</option>
+          </select>
+        </label>
+
+        @if (databricks.authType === 'token') {
+          <label>Access token
+            <input type="password" [(ngModel)]="databricks.token" name="dToken" placeholder="dapi••••••••" />
+          </label>
+        } @else {
+          <div class="row">
+            <label>Client ID (SP application ID)
+              <input [(ngModel)]="databricks.clientId" name="dCid" placeholder="Databricks_migration_SP app ID" />
+            </label>
+            <label>Client secret
+              <input type="password" [(ngModel)]="databricks.clientSecret" name="dSecret" />
+            </label>
+          </div>
+          <span class="hint">OAuth URL: {{ databricks.oauthUrl }}</span>
+        }
+
+        <button type="submit" class="primary">Save Databricks connection</button>
+      </form>
+    }
+  </div>
 
   <div class="panel list">
     <h3>Configured connections</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Endpoint</th>
-          <th>Database</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (c of connections(); track c.connectionId) {
-          <tr>
-            <td>{{ c.connectionName }}</td>
-            <td>{{ c.host }}:{{ c.port }}</td>
-            <td>{{ c.databaseName }}</td>
-            <td><button type="button" class="secondary" (click)="test(c.connectionId)">Test</button></td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="4">No connections yet.</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="cards">
+      @for (c of connections(); track c.connectionId) {
+        <article class="conn-card">
+          <div class="cc-head">
+            <span class="cc-icon"><app-icon [name]="driverIcon(c.dbType)" [size]="18" /></span>
+            <div class="cc-title">
+              <strong>{{ c.connectionName }}</strong>
+              <span class="cc-type">{{ driverLabel(c.dbType) }}</span>
+            </div>
+            <span class="pill" [class]="statusClass(statusFor(c.connectionId).state)">
+              {{ statusLabel(statusFor(c.connectionId).state) }}
+            </span>
+          </div>
+
+          <dl class="cc-meta">
+            <div><dt>Endpoint</dt><dd>{{ endpoint(c) }}</dd></div>
+            <div><dt>Database</dt><dd>{{ c.databaseName || '—' }}</dd></div>
+            <div><dt>User</dt><dd>{{ c.username || '—' }}</dd></div>
+          </dl>
+
+          @if (statusFor(c.connectionId).message) {
+            <p class="cc-msg" [class]="statusClass(statusFor(c.connectionId).state)">
+              {{ statusFor(c.connectionId).message }}
+            </p>
+          }
+
+          <div class="cc-actions">
+            <button type="button" class="secondary" (click)="test(c.connectionId)">
+              <app-icon name="play" [size]="14" /> Test
+            </button>
+            <button type="button" class="secondary" (click)="reconnect(c.connectionId)">
+              <app-icon name="convert" [size]="14" /> Reconnect
+            </button>
+            <button type="button" class="ghost danger" (click)="remove(c.connectionId)">Remove</button>
+          </div>
+        </article>
+      } @empty {
+        <p class="muted">No connections yet — configure one above.</p>
+      }
+    </div>
   </div>
 </section>

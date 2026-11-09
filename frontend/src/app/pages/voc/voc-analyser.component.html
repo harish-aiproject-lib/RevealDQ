@@ -1,0 +1,87 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="agent" [size]="20" /></span>
+    <div>
+      <h2>VoC Analyser Agent</h2>
+      <p>
+        Ask questions about what customers are saying. The agent reasons over the classified signals, the
+        sentiment picture and the open actions stored for this project, and answers with evidence.
+      </p>
+    </div>
+    <div class="head-actions">
+      <select [(ngModel)]="companyId" name="company" title="Scope">
+        <option [ngValue]="0">All companies</option>
+        @for (c of companies(); track c.companyId) {
+          <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+        }
+      </select>
+      <select [(ngModel)]="model" name="model" title="Model">
+        @for (m of models; track m.id) {
+          <option [value]="m.id">{{ m.label }}</option>
+        }
+      </select>
+      <button (click)="clear()" [disabled]="!turns().length">Clear</button>
+    </div>
+  </header>
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="panel chat">
+    <div class="thread">
+      @if (!turns().length) {
+        <div class="empty">
+          <span class="e-icon"><app-icon name="agent" [size]="22" /></span>
+          <p>Start with one of these, or ask your own question.</p>
+          <div class="starters">
+            @for (s of starters; track s) {
+              <button class="small" (click)="ask(s)">{{ s }}</button>
+            }
+          </div>
+        </div>
+      }
+      @for (t of turns(); track $index) {
+        <div class="turn" [class.user]="t.role === 'user'" [class.agent]="t.role === 'agent'">
+          <span class="avatar">
+            <app-icon [name]="t.role === 'user' ? 'users' : 'agent'" [size]="14" />
+          </span>
+          <div class="bubble">
+            @if (t.role === 'user') {
+              <p>{{ t.text }}</p>
+            } @else {
+              @if (t.highlights?.length) {
+                <div class="highlights">
+                  @for (h of t.highlights; track h) {
+                    <span class="tag product-violet">{{ h }}</span>
+                  }
+                </div>
+              }
+              <div class="md" [innerHTML]="t.html"></div>
+              <div class="meta">engine {{ t.engine || 'n/a' }}{{ t.model ? ' · ' + t.model : '' }}</div>
+            }
+          </div>
+        </div>
+      }
+      @if (busy()) {
+        <div class="turn agent">
+          <span class="avatar"><app-icon name="agent" [size]="14" /></span>
+          <div class="bubble thinking">Reading the signals…</div>
+        </div>
+      }
+    </div>
+
+    <form class="composer" (ngSubmit)="ask()">
+      <input
+        [(ngModel)]="question"
+        name="question"
+        placeholder="Ask about sentiment, themes, risks, what to do next…"
+        [disabled]="busy()"
+        autocomplete="off"
+      />
+      <button type="submit" class="primary" [disabled]="busy() || !question.trim()">
+        <app-icon name="arrow-right" [size]="15" /> Ask
+      </button>
+    </form>
+  </div>
+</section>

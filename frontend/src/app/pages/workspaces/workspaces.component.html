@@ -13,17 +13,20 @@
         <app-logo [compact]="true" [onDark]="true" />
       </div>
       <nav class="explorer">
-        <p class="section">Projects</p>
-        @for (ws of workspaces(); track ws.workspaceId) {
-          <a [routerLink]="['/workspaces', ws.workspaceId]">
-            <app-icon name="grid" [size]="16" /> {{ ws.workspaceName }}
-          </a>
+        @for (g of grouped(); track g.product.code) {
+          <p class="section">{{ g.product.name }}</p>
+          @for (ws of g.items; track ws.workspaceId) {
+            <a [routerLink]="['/workspaces', ws.workspaceId]">
+              <app-icon [name]="g.product.icon" [size]="16" /> {{ ws.workspaceName }}
+            </a>
+          }
         } @empty {
+          <p class="section">Projects</p>
           <span class="muted tiny">No projects yet</span>
         }
         <p class="section">Quick links</p>
         <a routerLink="/workspaces" class="active">
-          <app-icon name="home" [size]="16" /> All workspaces
+          <app-icon name="home" [size]="16" /> All projects
         </a>
       </nav>
     } @else {
@@ -38,8 +41,8 @@
           <app-icon name="home" [size]="17" />
         </a>
         <div>
-          <p class="eyebrow">Home</p>
-          <h1>Project workspaces</h1>
+          <p class="eyebrow">Reality Reveal · Home</p>
+          <h1>Projects</h1>
         </div>
       </div>
       <div class="banner-right">
@@ -62,7 +65,8 @@
 
     <main class="content">
       <p class="muted intro">
-        Create customer-scoped projects. Every artefact stays inside its workspace.
+        Create a customer-scoped project for the product you need. Each project lives inside one
+        Reveal module and keeps its own connections, agents, rules and runs.
       </p>
 
       @if (error) {
@@ -73,14 +77,48 @@
         <section class="panel create">
           <div class="create-head">
             <span class="head-icon orange"><app-icon name="plus" [size]="18" /></span>
-            <h2>New workspace</h2>
+            <h2>New project</h2>
           </div>
+
+          <div class="picker">
+            <p class="picker-label">Product module</p>
+            <div class="picker-grid">
+              @for (p of products; track p.code) {
+                <button
+                  type="button"
+                  class="module-opt"
+                  [class.accent-violet]="p.accent === 'violet'"
+                  [class.selected]="selectedProduct() === p.code"
+                  [class.disabled]="!canCreate(p.code)"
+                  [disabled]="!canCreate(p.code)"
+                  (click)="pick(p)"
+                  [attr.aria-pressed]="selectedProduct() === p.code"
+                >
+                  <span class="opt-icon" [class.product-violet]="p.accent === 'violet'" [class.product-cyan]="p.accent === 'cyan'">
+                    <app-icon [name]="p.icon" [size]="18" />
+                  </span>
+                  <span class="opt-body">
+                    <span class="opt-name">{{ p.name }}</span>
+                    <span class="opt-tag">{{ p.tagline }}</span>
+                  </span>
+                  <span
+                    class="tag opt-status"
+                    [class.preview]="statusOf(p.code) === 'PREVIEW'"
+                    [class.neutral]="statusOf(p.code) === 'COMING_SOON'"
+                  >
+                    {{ statusLabel(p.code) }}
+                  </span>
+                </button>
+              }
+            </div>
+          </div>
+
           <label>
-            Workspace name
+            Project name
             <input
               [(ngModel)]="workspaceName"
               name="workspaceName"
-              placeholder="e.g. Telco RA Demo"
+              [placeholder]="selected().code === 'DQ' ? 'e.g. Telco RA Demo' : 'e.g. Contact Centre Voice 2026'"
             />
           </label>
           <label>
@@ -95,24 +133,62 @@
             Description
             <textarea [(ngModel)]="description" name="description" rows="3"></textarea>
           </label>
-          <button type="button" (click)="create()">Create project</button>
+          <button type="button" (click)="create()" [class.violet]="selected().accent === 'violet'">
+            Create {{ selected().name }} project
+          </button>
         </section>
 
         <section class="list">
-          @for (ws of workspaces(); track ws.workspaceId) {
-            <a class="panel card" [routerLink]="['/workspaces', ws.workspaceId]">
+          <div class="filters">
+            <button
+              type="button"
+              class="chip"
+              [class.on]="filter() === 'ALL'"
+              (click)="filter.set('ALL')"
+            >
+              All <span class="count">{{ countFor('ALL') }}</span>
+            </button>
+            @for (p of products; track p.code) {
+              <button
+                type="button"
+                class="chip"
+                [class.accent-violet]="p.accent === 'violet'"
+                [class.on]="filter() === p.code"
+                (click)="filter.set(p.code)"
+              >
+                <app-icon [name]="p.icon" [size]="14" /> {{ p.name }}
+                <span class="count">{{ countFor(p.code) }}</span>
+              </button>
+            }
+          </div>
+
+          @for (ws of filtered(); track ws.workspaceId) {
+            <a
+              class="panel card"
+              [class.accent-violet]="productOf(ws).accent === 'violet'"
+              [routerLink]="['/workspaces', ws.workspaceId]"
+            >
               <div class="row">
                 <h3>{{ ws.workspaceName }}</h3>
-                <span class="tag">{{ ws.role }}</span>
+                <div class="badges">
+                  <span class="tag" [class.product-violet]="productOf(ws).accent === 'violet'" [class.product-cyan]="productOf(ws).accent === 'cyan'">
+                    <app-icon [name]="productOf(ws).icon" [size]="12" /> {{ productOf(ws).name }}
+                  </span>
+                  <span class="tag neutral">{{ ws.role }}</span>
+                </div>
               </div>
               <p class="customer">{{ ws.customerName }}</p>
               <p class="desc muted">{{ ws.description || 'No description' }}</p>
-              <span class="open">Open workspace <app-icon name="arrow-right" [size]="14" /></span>
+              <span class="open">Open project <app-icon name="arrow-right" [size]="14" /></span>
             </a>
           } @empty {
             <div class="panel empty">
               <app-icon name="spark" [size]="26" />
-              <p>No workspaces yet. Create your first project to begin DQ analysis.</p>
+              @if (filter() === 'ALL') {
+                <p>No projects yet. Pick a product module and create your first project.</p>
+              } @else {
+                <p>No {{ productFor(filter()).name }} projects yet.</p>
+              }
             </div>
           }
         </section>

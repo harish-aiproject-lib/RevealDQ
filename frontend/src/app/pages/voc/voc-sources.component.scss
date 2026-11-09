@@ -1,0 +1,143 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.block {
+  padding: 1.15rem 1.25rem;
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.small-p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.check-row input {
+  width: auto;
+}
+
+.fields {
+  display: grid;
+  gap: 0.7rem;
+}
+
+/* sources list */
+.src-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.src {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.s-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+.s-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.s-sub {
+  font-size: 0.76rem;
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+.s-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  word-break: break-all;
+}
+
+.notice {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 0.65rem 0.8rem;
+  border-radius: 9px;
+  background: var(--warn-soft);
+  color: var(--ink-2);
+}
+.notice app-icon {
+  color: var(--warn);
+  margin-top: 0.15rem;
+}
+
+.sched-meta {
+  font-size: 0.78rem;
+}
+
+/* provider picker */
+.prov-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.prov {
+  justify-content: flex-start;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+}
+.prov.active {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+td.msg {
+  max-width: 320px;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

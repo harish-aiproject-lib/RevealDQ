@@ -1,0 +1,288 @@
+<section class="page">
+  <header class="page-head">
+    <span class="head-icon"><app-icon name="refresh" [size]="20" /></span>
+    <div>
+      <h2>Sources &amp; sync</h2>
+      <p>
+        The automation behind Reveal VoC. LinkedIn's public pages are scraped with a headless browser (no
+        credentials), refreshed on a schedule, and every extraction → analysis → action run is recorded here.
+        No agents are involved in extraction — it is deterministic automation; the agent only reasons over what is stored.
+      </p>
+    </div>
+    <div class="head-actions">
+      <button class="primary" (click)="syncAll()" [disabled]="busy() || !companies().length || !!rangeError()">
+        <app-icon name="refresh" [size]="15" /> {{ busy() ? 'Working…' : 'Scrape all companies now' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="panel range">
+    <div class="range-row">
+      <strong class="range-label"><app-icon name="clock" [size]="14" /> Scrape window</strong>
+      <div class="presets">
+        @for (p of presets; track p.days) {
+          <button type="button" class="chip" [class.on]="isPreset(p.days)" (click)="preset(p.days)">{{ p.label }}</button>
+        }
+      </div>
+      <label class="date">
+        From
+        <input type="date" [(ngModel)]="range.from" name="from" [max]="range.to || today" />
+      </label>
+      <label class="date">
+        To
+        <input type="date" [(ngModel)]="range.to" name="to" [min]="range.from" [max]="today" />
+      </label>
+      <span class="days" [class.bad]="rangeError()">
+        @if (rangeError()) {
+          {{ rangeError() }}
+        } @else {
+          {{ rangeDays() }} day{{ rangeDays() === 1 ? '' : 's' }}. Scheduled refreshes run incrementally from the last sync.
+        }
+      </span>
+    </div>
+  </div>
+
+  @if (message) {
+    <p class="ok">{{ message }}</p>
+  }
+  @if (notes.length) {
+    <ul class="notes">
+      @for (n of notes; track $index) {
+        <li>{{ n }}</li>
+      }
+    </ul>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="grid">
+    <!-- ---------------- connected sources ---------------- -->
+    <div class="panel block">
+      <h3><app-icon name="link" [size]="15" /> LinkedIn sources</h3>
+      @if (!sources().length) {
+        <div class="empty">
+          <span class="e-icon"><app-icon name="link" [size]="22" /></span>
+          <p>No source configured yet. The first scrape will create the default <strong>LinkedIn public pages (Playwright)</strong> source automatically; add a data-provider endpoint or the sample generator below if you need them.</p>
+        </div>
+      } @else {
+        <ul class="src-list">
+          @for (s of sources(); track s.sourceId) {
+            <li class="src">
+              <span class="s-icon"><app-icon [name]="providerMeta(s.provider).icon" [size]="17" /></span>
+              <div class="s-body">
+                <div class="s-head">
+                  <strong>{{ s.label }}</strong>
+                  <span class="tag" [class.ok]="s.status === 'CONNECTED'" [class.draft]="s.status === 'CONFIGURED'" [class.fail]="s.status === 'EXPIRED' || s.status === 'ERROR'">
+                    {{ s.status.toLowerCase() }}
+                  </span>
+                  <span class="tag cat">{{ s.provider.replace('_', ' ').toLowerCase() }}</span>
+                </div>
+                <div class="s-sub muted">
+                  @if (s.accountEmail) {
+                    <span>account {{ s.accountEmail }}</span>
+                  }
+                  @if (s.config?.accountName) {
+                    <span>· {{ s.config.accountName }}</span>
+                  }
+                  @if (s.config?.expiresAt) {
+                    <span>· token expires {{ s.config.expiresAt | slice: 0 : 10 }}</span>
+                  }
+                  @if (s.config?.endpoint) {
+                    <span class="mono">{{ s.config.endpoint }}</span>
+                  }
+                  <span>· last sync {{ relTime(s.lastSyncAt) }}</span>
+                </div>
+              </div>
+              <div class="s-actions">
+                @if (s.provider === 'OFFICIAL_API') {
+                  <button class="small primary" (click)="connect(s)" [disabled]="!oauthReady()">
+                    <app-icon name="link" [size]="13" /> {{ s.status === 'CONNECTED' ? 'Reconnect' : 'Connect LinkedIn' }}
+                  </button>
+                }
+                <button class="small danger" (click)="remove(s)"><app-icon name="trash" [size]="13" /></button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (has('OFFICIAL_API') && !oauthReady()) {
+        <div class="notice">
+          <app-icon name="lock" [size]="14" />
+          <div>
+            <strong>LinkedIn OAuth is not configured on the API.</strong>
+            Create an app at <span class="mono">developer.linkedin.com</span> (owned by
+            {{ accountEmail() || 'your LinkedIn account' }}), request the <em>Community Management API</em> and
+            <em>Sign In with LinkedIn</em> products, add the redirect URL
+            <span class="mono">{{ redirectUri() || 'http://127.0.0.1:8080/api/v1/voc/linkedin/oauth/callback' }}</span>,
+            then set <span class="mono">LINKEDIN_CLIENT_ID</span>, <span class="mono">LINKEDIN_CLIENT_SECRET</span> in
+            <span class="mono">.env</span> and restart the API.
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ---------------- schedule ---------------- -->
+    <div class="panel block">
+      <h3><app-icon name="clock" [size]="15" /> Periodic refresh</h3>
+      <p class="muted small-p">
+        The API scheduler re-extracts every active company, analyses new signals and refreshes actions on this
+        cadence.
+      </p>
+      <label class="check">
+        <span class="check-row">
+          <input type="checkbox" [(ngModel)]="schedule.enabled" name="enabled" />
+          Enable scheduled refresh
+        </span>
+      </label>
+      <label>
+        Cadence
+        <select [(ngModel)]="schedule.cadenceMinutes" name="cadence">
+          @for (o of cadenceOptions; track o.v) {
+            <option [ngValue]="o.v">{{ o.l }}</option>
+          }
+        </select>
+      </label>
+      <div class="sched-meta muted">
+        @if (schedule.enabled && schedule.nextRunAt) {
+          <span>next run {{ relTime(schedule.nextRunAt).replace('ago', 'from now') }}</span>
+        }
+        @if (schedule.lastRunAt) {
+          <span>· last run {{ relTime(schedule.lastRunAt) }} ({{ schedule.lastStatus || '—' }})</span>
+        }
+      </div>
+      <button class="primary" (click)="saveSchedule()"><app-icon name="check" [size]="15" /> Save schedule</button>
+    </div>
+
+    <!-- ---------------- add source ---------------- -->
+    <div class="panel block">
+      <h3><app-icon name="plus" [size]="15" /> Add a source</h3>
+      <div class="prov-grid">
+        @for (p of providers; track p.id) {
+          <button type="button" class="prov" [class.active]="selected === p.id" (click)="selected = p.id">
+            <app-icon [name]="p.icon" [size]="16" />
+            <span>{{ p.label }}</span>
+          </button>
+        }
+      </div>
+      <p class="muted small-p">{{ providerMeta(selected).note }}</p>
+
+      <form (ngSubmit)="addSource()" class="fields">
+        <label>
+          Label (optional)
+          <input [(ngModel)]="form.label" name="label" [placeholder]="providerMeta(selected).label" />
+        </label>
+        @if (selected === 'PLAYWRIGHT') {
+          <p class="info">
+            <app-icon name="globe" [size]="14" />
+            Reads only what LinkedIn shows a signed-out visitor: roughly the last ten company-feed posts, indexed public posts
+            that name the company, and the visible comments on each. Runs are throttled and stop early if LinkedIn shows its sign-in wall.
+          </p>
+        }
+        @if (selected === 'GENERIC_JSON') {
+          <label>
+            Endpoint URL
+            <input [(ngModel)]="form.endpoint" name="endpoint" placeholder="https://provider.example.com/linkedin/search?handle={handle}&tags={hashtags}&since={since}&until={until}" />
+          </label>
+          <div class="row">
+            <label>
+              Method
+              <select [(ngModel)]="form.method" name="method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+              </select>
+            </label>
+            <label>
+              Auth header name
+              <input [(ngModel)]="form.headerName" name="headerName" />
+            </label>
+          </div>
+          <label>
+            Auth header value
+            <input [(ngModel)]="form.headerValue" name="headerValue" type="password" placeholder="Bearer …" />
+          </label>
+        }
+        <button type="submit" class="primary" [disabled]="busy()">
+          <app-icon name="plus" [size]="15" /> Add {{ providerMeta(selected).label.split(' — ')[0] }} source
+        </button>
+      </form>
+    </div>
+
+    <!-- ---------------- import ---------------- -->
+    <div class="panel block">
+      <h3><app-icon name="upload" [size]="15" /> Import signals</h3>
+      @if (!has('IMPORT')) {
+        <p class="muted small-p">Add a “Manual import” source first (left), then paste or upload JSON here.</p>
+      }
+      <div class="row">
+        <label>
+          Company
+          <select [(ngModel)]="importForm.companyId" name="impCompany">
+            @for (c of companies(); track c.companyId) {
+              <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          File
+          <input type="file" accept=".json,application/json" (change)="onFile($event)" />
+        </label>
+      </div>
+      <label>
+        JSON payload
+        <textarea [(ngModel)]="importForm.payload" name="payload" rows="6" [placeholder]="sampleItem"></textarea>
+      </label>
+      <button class="primary" (click)="runImport()" [disabled]="busy() || !has('IMPORT') || !importForm.payload">
+        <app-icon name="upload" [size]="15" /> Import &amp; analyse
+      </button>
+    </div>
+  </div>
+
+  <!-- ---------------- run history ---------------- -->
+  <div class="panel block">
+    <h3><app-icon name="pipeline" [size]="15" /> Run history</h3>
+    @if (!runs().length) {
+      <p class="muted small-p">No runs yet.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Company</th>
+            <th>Provider</th>
+            <th>Trigger</th>
+            <th>Status</th>
+            <th>Fetched</th>
+            <th>New</th>
+            <th>Analysed</th>
+            <th>Actions</th>
+            <th>Started</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of runs(); track r.runId) {
+            <tr>
+              <td class="muted">{{ r.runId }}</td>
+              <td>{{ r.companyName }}</td>
+              <td class="muted">{{ r.provider }}</td>
+              <td class="muted">{{ r.trigger.toLowerCase() }}</td>
+              <td>
+                <span class="tag" [class.ok]="r.status === 'SUCCESS'" [class.fail]="r.status === 'FAILED'" [class.orange]="r.status === 'PARTIAL'" [class.draft]="r.status === 'RUNNING'">
+                  {{ r.status.toLowerCase() }}
+                </span>
+              </td>
+              <td>{{ r.itemsFetched }}</td>
+              <td>{{ r.itemsNew }}</td>
+              <td>{{ r.itemsAnalysed }}</td>
+              <td>{{ r.actionsCreated }}</td>
+              <td class="muted">{{ relTime(r.startedAt) }}</td>
+              <td class="msg muted">{{ r.message }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</section>

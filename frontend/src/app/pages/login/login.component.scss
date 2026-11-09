@@ -194,6 +194,142 @@
   font-size: 0.86rem;
 }
 
+/* ---------- product modules ---------- */
+
+.modules {
+  position: relative;
+  z-index: 2;
+  padding: 2.4rem clamp(1rem, 4.5vw, 3.5rem) 0;
+  display: grid;
+  gap: 1.2rem;
+}
+
+.section-head {
+  display: grid;
+  gap: 0.3rem;
+  max-width: 44rem;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+}
+
+.section-head p.muted {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+.module {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 1.45rem 1.35rem;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.module::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--grad-hero);
+}
+
+.module.accent-violet::before {
+  background: var(--grad-violet);
+}
+
+.module:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.module-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.module-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.module-icon.product-cyan {
+  background: var(--cyan-soft);
+  color: var(--cyan-ink);
+}
+
+.module-icon.product-violet {
+  background: var(--violet-soft);
+  color: var(--violet-ink);
+}
+
+.module h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1.35rem;
+}
+
+.grad-name {
+  background: var(--grad-hero);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.module.accent-violet .grad-name {
+  background: var(--grad-violet);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.tagline {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.module .desc {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.mini-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.mini-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.83rem;
+  color: var(--ink-2);
+}
+
+.mini-list app-icon {
+  color: var(--ok);
+}
+
 .cards {
   position: relative;
   z-index: 2;
@@ -274,7 +410,8 @@
     justify-self: stretch;
     max-width: none;
   }
-  .cards {
+  .cards,
+  .module-grid {
     grid-template-columns: 1fr;
   }
 }

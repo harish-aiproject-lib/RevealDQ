@@ -13,6 +13,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS dq_job_results;
 DROP TABLE IF EXISTS dq_job_runs;
 DROP TABLE IF EXISTS dq_pipelines;
+DROP TABLE IF EXISTS dq_rule_audit;
 DROP TABLE IF EXISTS dq_rules;
 DROP TABLE IF EXISTS data_connections;
 DROP TABLE IF EXISTS screen_acl;
@@ -60,6 +61,8 @@ CREATE TABLE workspaces (
     workspace_name VARCHAR(150) NOT NULL,
     customer_name  VARCHAR(150) NOT NULL,
     description    VARCHAR(500),
+    -- Reality Reveal: product module this project belongs to (see 005_product_modules.sql)
+    product_code   VARCHAR(20) NOT NULL DEFAULT 'DQ',
     created_by     BIGINT UNSIGNED NOT NULL,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_ws_creator FOREIGN KEY (created_by) REFERENCES users(user_id)
@@ -89,15 +92,41 @@ CREATE TABLE data_connections (
     connection_id   BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     workspace_id    BIGINT UNSIGNED NOT NULL,
     connection_name VARCHAR(150) NOT NULL,
-    db_type         ENUM('MYSQL') NOT NULL DEFAULT 'MYSQL',
+    db_type         VARCHAR(20) NOT NULL DEFAULT 'MYSQL',
     host            VARCHAR(255) NOT NULL,
     port            INT NOT NULL DEFAULT 3306,
     database_name   VARCHAR(128) NOT NULL,
     username        VARCHAR(128) NOT NULL,
-    password_enc    VARCHAR(512) NOT NULL,
+    password_enc    VARCHAR(2048) NOT NULL DEFAULT '',
+    http_path       VARCHAR(512) NULL,
+    extra_config    JSON NULL,
     is_active       TINYINT(1) NOT NULL DEFAULT 1,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_conn_ws FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE conversion_audit (
+    conversion_id  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    workspace_id   BIGINT UNSIGNED NOT NULL,
+    file_name      VARCHAR(255) NOT NULL,
+    source_type    VARCHAR(40) NULL,
+    source_label   VARCHAR(120) NULL,
+    target         VARCHAR(40) NULL,
+    model_used     VARCHAR(100) NULL,
+    engine         VARCHAR(20) NULL,
+    plan_md        MEDIUMTEXT,
+    source_code    MEDIUMTEXT,
+    converted_code MEDIUMTEXT,
+    language       VARCHAR(20) NULL,
+    validation     JSON,
+    status         VARCHAR(30) NULL,
+    git_path       VARCHAR(512) NULL,
+    notebook_path  VARCHAR(512) NULL,
+    job_id         VARCHAR(64) NULL,
+    run_id         VARCHAR(64) NULL,
+    created_by     BIGINT UNSIGNED NULL,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_conv_ws (workspace_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE dq_rules (
@@ -116,6 +145,32 @@ CREATE TABLE dq_rules (
     created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rule_ws FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id),
     CONSTRAINT fk_rule_user FOREIGN KEY (created_by) REFERENCES users(user_id)
+) ENGINE=InnoDB;
+
+-- Traceability / audit trail for rules saved from the DQ Analyser Agent.
+-- Captures the analyst prompt, full interaction history, tool/MCP traces, the
+-- model + data channel used, and the impact snapshot at save time.
+CREATE TABLE dq_rule_audit (
+    audit_id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    rule_id          BIGINT UNSIGNED NULL,
+    workspace_id     BIGINT UNSIGNED NOT NULL,
+    rule_name        VARCHAR(200) NOT NULL,
+    dimension        VARCHAR(40) NULL,
+    prompt           TEXT,
+    conversation     JSON,
+    tool_traces      JSON,
+    model_used       VARCHAR(100) NULL,
+    data_source      VARCHAR(20) NULL,
+    impacted_count   BIGINT NULL,
+    total_count      BIGINT NULL,
+    impacted_percent DECIMAL(7,2) NULL,
+    check_sql        TEXT,
+    status           VARCHAR(20) NULL,
+    created_by       BIGINT UNSIGNED NULL,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_audit_ws (workspace_id),
+    KEY idx_audit_rule (rule_id),
+    CONSTRAINT fk_audit_ws FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE dq_pipelines (

@@ -1,0 +1,279 @@
+<section class="conv">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow"><app-icon name="convert" [size]="14" /> Multi-agent migration</p>
+      <h2>ETL Code Conversion Agent</h2>
+      <p class="muted">
+        Upload Oracle / SQL Server / MySQL stored procedures, Informatica (.xml) or SSIS (.dtsx)
+        packages. The agents analyse, convert to Databricks SQL / PySpark, validate, then check in,
+        deploy a notebook, and trigger a job — target catalog <code>migration_demo</code>.
+      </p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button type="button" [class.active]="tab() === 'workflow'" (click)="tab.set('workflow')">
+      Conversion workflow
+    </button>
+    <button type="button" [class.active]="tab() === 'audit'" (click)="tab.set('audit'); loadAudit()">
+      Audit trail
+    </button>
+  </div>
+
+  @if (tab() === 'workflow') {
+    <!-- Controls -->
+    <div class="controls">
+      <label class="file-btn">
+        <app-icon name="convert" [size]="15" />
+        <span>{{ fileName() || 'Choose file (.sql / .xml / .dtsx)' }}</span>
+        <input type="file" accept=".sql,.xml,.dtsx,.txt" (change)="onFilePicked($event)" hidden />
+      </label>
+
+      <div class="ctl">
+        <span class="ctl-label">Target</span>
+        <select [ngModel]="target()" (ngModelChange)="target.set($event)">
+          @for (t of targets; track t.id) {
+            <option [value]="t.id">{{ t.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="ctl">
+        <span class="ctl-label">Model</span>
+        <select [(ngModel)]="selectedModel">
+          @for (m of models; track m.id) {
+            <option [value]="m.id">{{ m.label }}</option>
+          }
+        </select>
+      </div>
+
+      <button type="button" class="primary run-all" [disabled]="busy() || !fileContent" (click)="runEndToEnd()">
+        <app-icon name="play" [size]="15" /> Run end-to-end
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="banner bad">{{ error() }}</div>
+    }
+
+    <!-- Agent pipeline / stepper -->
+    <div class="stepper">
+      @for (s of steps; track s.id; let i = $index) {
+        <div class="step" [class]="status(s.id)">
+          <div class="step-top">
+            <span class="step-icon"><app-icon [name]="stepIconState(s.id)" [size]="16" /></span>
+            <div class="step-titles">
+              <strong>{{ s.label }}</strong>
+              <span class="agent-name">{{ s.agent }}</span>
+            </div>
+            @if (s.sideEffect) {
+              <span class="se-badge" title="Has real side effects — only runs on click">live</span>
+            }
+          </div>
+          <p class="step-hint">{{ s.hint }}</p>
+          @if (msg(s.id)) {
+            <p class="step-msg">{{ msg(s.id) }}</p>
+          }
+          <button
+            type="button"
+            class="step-run"
+            [disabled]="!canRun(s.id)"
+            (click)="
+              s.id === 'analyze'
+                ? runAnalyze()
+                : s.id === 'convert'
+                  ? runConvert()
+                  : s.id === 'validate'
+                    ? runValidate()
+                    : s.id === 'checkin'
+                      ? runCheckin()
+                      : s.id === 'deploy'
+                        ? runDeploy()
+                        : runJob(true)
+            "
+          >
+            {{ status(s.id) === 'running' ? 'Running…' : status(s.id) === 'done' ? 'Re-run' : 'Run' }}
+          </button>
+        </div>
+        @if (i < steps.length - 1) {
+          <div class="step-arrow"><app-icon name="arrow-right" [size]="16" /></div>
+        }
+      }
+    </div>
+
+    <!-- Results -->
+    <div class="results">
+      <!-- Left: analysis + plan -->
+      <div class="col">
+        @if (analysis(); as a) {
+          <article class="card">
+            <div class="card-head">
+              <h3>Analysis</h3>
+              <span class="pill info">{{ a.source.sourceLabel }}</span>
+            </div>
+            @if (a.metrics.length) {
+              <div class="metrics">
+                @for (m of a.metrics; track m.label) {
+                  <div class="metric" [class]="toneClass(m.tone)">
+                    <span class="m-val">{{ m.value }}</span>
+                    <span class="m-lab">{{ m.label }}</span>
+                    <span class="m-hint">{{ m.hint }}</span>
+                  </div>
+                }
+              </div>
+            }
+            <div class="md" [innerHTML]="summaryHtml()"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>Conversion plan</h3>
+              <button type="button" class="ghost sm" (click)="downloadPlan()">
+                <app-icon name="convert" [size]="13" /> Download .md
+              </button>
+            </div>
+            <div class="md" [innerHTML]="planHtml()"></div>
+          </article>
+        } @else {
+          <div class="empty">
+            <app-icon name="agent" [size]="30" />
+            <p>Upload a file and run <strong>Analyse</strong> to begin.</p>
+          </div>
+        }
+      </div>
+
+      <!-- Right: converted code -->
+      <div class="col">
+        @if (conversion(); as c) {
+          <article class="card">
+            <div class="card-head">
+              <h3>Converted code</h3>
+              <span class="pill" [class.good]="c.validation.ok" [class.bad]="!c.validation.ok">
+                {{ c.validation.ok ? 'Syntax OK' : c.validation.issues.length + ' issue(s)' }}
+              </span>
+              <span class="pill info">{{ engineLabel(c.engine) }}</span>
+              <button type="button" class="ghost sm" (click)="downloadCode()">
+                <app-icon name="convert" [size]="13" /> Download
+              </button>
+            </div>
+
+            @if (!c.validation.ok && c.validation.issues.length) {
+              <ul class="issues">
+                @for (iss of c.validation.issues; track iss) {
+                  <li>{{ iss }}</li>
+                }
+              </ul>
+            }
+
+            <pre class="code"><code>{{ c.code }}</code></pre>
+
+            @if (c.notes.length) {
+              <div class="notes">
+                <span class="notes-title">Conversion notes</span>
+                <ul>
+                  @for (n of c.notes; track n) {
+                    <li>{{ n }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <div class="artifact-links">
+              @if (gitPath()) {
+                <span class="al"><app-icon name="flow" [size]="13" /> Git: {{ gitPath() }}</span>
+              }
+              @if (notebookPath()) {
+                <span class="al"><app-icon name="database" [size]="13" /> Notebook: {{ notebookPath() }}</span>
+              }
+              @if (jobId()) {
+                <span class="al"><app-icon name="pipeline" [size]="13" /> Job {{ jobId() }}{{ runId() ? ' · run ' + runId() : '' }}</span>
+              }
+            </div>
+
+            <div class="card-actions">
+              <button type="button" class="secondary" [disabled]="savingAudit()" (click)="saveAudit()">
+                {{ savingAudit() ? 'Saving…' : 'Save to audit trail' }}
+              </button>
+            </div>
+          </article>
+        } @else {
+          <div class="empty">
+            <app-icon name="convert" [size]="30" />
+            <p>Run <strong>Convert</strong> to generate Databricks code.</p>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <!-- Audit trail -->
+    <div class="audit">
+      @if (!audit().length) {
+        <div class="empty">
+          <app-icon name="shield" [size]="30" />
+          <p>No conversions recorded yet. Convert a file and save it to the audit trail.</p>
+        </div>
+      } @else {
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>File</th>
+              <th>Source</th>
+              <th>Target</th>
+              <th>Model</th>
+              <th>Engine</th>
+              <th>Status</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of audit(); track row.conversionId) {
+              <tr [class.sel]="selectedAudit()?.conversionId === row.conversionId" (click)="selectAudit(row)">
+                <td>{{ row.conversionId }}</td>
+                <td>{{ row.fileName }}</td>
+                <td>{{ row.sourceLabel || row.sourceType }}</td>
+                <td>{{ row.target }}</td>
+                <td class="mono">{{ row.modelUsed || '—' }}</td>
+                <td>{{ row.engine }}</td>
+                <td><span class="pill info">{{ row.status }}</span></td>
+                <td>{{ row.createdAt | date: 'short' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        @if (selectedAudit(); as row) {
+          <article class="card audit-detail">
+            <div class="card-head">
+              <h3>{{ row.fileName }} — conversion #{{ row.conversionId }}</h3>
+              <span class="pill" [class.good]="row.validation?.ok" [class.bad]="row.validation && !row.validation.ok">
+                {{ row.validation?.ok ? 'Syntax OK' : 'Review' }}
+              </span>
+            </div>
+            <div class="ad-grid">
+              <div><span class="k">Source</span><span class="v">{{ row.sourceLabel || row.sourceType }}</span></div>
+              <div><span class="k">Target</span><span class="v">{{ row.target }}</span></div>
+              <div><span class="k">Model</span><span class="v mono">{{ row.modelUsed || '—' }}</span></div>
+              <div><span class="k">Engine</span><span class="v">{{ row.engine }}</span></div>
+              <div><span class="k">Git</span><span class="v">{{ row.gitPath || '—' }}</span></div>
+              <div><span class="k">Notebook</span><span class="v">{{ row.notebookPath || '—' }}</span></div>
+              <div><span class="k">Job</span><span class="v">{{ row.jobId || '—' }}{{ row.runId ? ' · run ' + row.runId : '' }}</span></div>
+            </div>
+            @if (row.planMarkdown) {
+              <details>
+                <summary>Conversion plan</summary>
+                <pre class="code sm"><code>{{ row.planMarkdown }}</code></pre>
+              </details>
+            }
+            @if (row.convertedCode) {
+              <details open>
+                <summary>Converted code ({{ row.language }})</summary>
+                <pre class="code"><code>{{ row.convertedCode }}</code></pre>
+              </details>
+            }
+          </article>
+        }
+      }
+    </div>
+  }
+</section>
